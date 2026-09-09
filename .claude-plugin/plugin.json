@@ -1,0 +1,20 @@
+{
+  "name": "bili-skills",
+  "description": "Download bilibili videos and turn their official AI subtitles into readable transcripts, OPML mindmaps, outlines and searchable Chinese PDFs",
+  "version": "0.1.0",
+  "author": {
+    "name": "xiangyu"
+  },
+  "homepage": "https://github.com/xykong36/bili-skills",
+  "repository": "https://github.com/xykong36/bili-skills",
+  "license": "MIT",
+  "keywords": [
+    "bilibili",
+    "subtitles",
+    "mindmap",
+    "opml",
+    "pdf",
+    "bbdown",
+    "transcript"
+  ]
+}
