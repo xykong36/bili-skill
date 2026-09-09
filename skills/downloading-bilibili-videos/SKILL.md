@@ -32,6 +32,7 @@ python3 scripts/download.py BV1xxx --out ./out
 | 只要封面和元信息，不下正片 | `--no-video` |
 | 文件名带日期和标题 | `--stem-title` |
 | 挂代理 | `--proxy socks5://127.0.0.1:1080` |
+| 选项可以随便叠 | `download.py BV1xxx --out /tmp/x --no-video --stem-title` |
 
 重跑是幂等的：已存在且校验通过的产物会跳过，坏的会被删掉重下。
 

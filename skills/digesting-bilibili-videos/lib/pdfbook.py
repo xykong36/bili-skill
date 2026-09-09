@@ -465,7 +465,7 @@ def render_channel(entries, out_dir, channel_name, log=print, force=False):
     """
     if not entries:
         return None, None
-    # 文件名和 youtube-collections 的 digests/ 对齐；封面上印的仍是中文（KIND_TEXT）
+    # 文件名用英文（跨平台稳），封面上印的仍是中文（KIND_TEXT）
     mm_pdf = out_dir / f"{channel_name}-mindmap.pdf"
     ol_pdf = out_dir / f"{channel_name}-outline.pdf"
 

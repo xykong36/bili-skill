@@ -19,10 +19,20 @@ from lib import skill_config
 DEFAULT_CANARY = os.environ.get("BILI_CANARY", "BV1zsXbBVE5d")
 
 
+# 可选依赖：缺了只是少一部分功能，不是跑不了。
+OPTIONAL = {"fpdf": "--skip-pdf", "fontTools": "--skip-pdf",
+            "DEEPSEEK_API_KEY": "--skip-mindmap"}
+missing_optional = {}
+
+
 def row(name, ok, detail, fix=""):
-    print(f"{'✓' if ok else '✗'} {name:<16} {detail}")
+    mark = "✓" if ok else ("!" if name in OPTIONAL else "✗")
+    print(f"{mark} {name:<16} {detail}")
     if not ok and fix:
         print(f"                   -> {fix}")
+    if not ok and name in OPTIONAL:
+        missing_optional[name] = OPTIONAL[name]
+        return True          # 不算硬失败
     return ok
 
 
@@ -83,7 +93,15 @@ def main():
             "这说明不是「某个视频恰好没字幕」，而是 cookie 失效或被限流。"
             "先 `BBDown login` 重新登录；还不行就等一会儿再试。")
 
-    print("\n" + ("全部就绪。" if all_ok else "上面有 ✗，先补齐再跑 digest.py。"))
+    print()
+    if not all_ok:
+        print("有 ✗，那是硬依赖，先补齐再跑 digest.py。")
+    elif missing_optional:
+        flags = " ".join(sorted(set(missing_optional.values())))
+        print(f"核心链路就绪。带 ! 的是可选项，缺了就加 {flags} 跑，"
+              f"仍然能拿到字幕和可读版。")
+    else:
+        print("全部就绪。")
     return 0 if all_ok else 1
 
 

@@ -36,29 +36,3 @@ def last_timestamp(path):
                 h, mi, s, ms = (int(x) for x in m.group(5, 6, 7, 8))
                 last = max(last, h * 3600 + mi * 60 + s + ms / 1000)
     return last
-
-
-def longest_repeat_run(path):
-    """最长的连续重复字幕条数——whisper 幻觉循环的特征。"""
-    texts, buf = [], []
-    with open(path, encoding="utf-8", errors="ignore") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                if buf:
-                    texts.append(" ".join(buf[2:]) if len(buf) > 2 else "")
-                buf = []
-            else:
-                buf.append(line)
-    if buf:
-        texts.append(" ".join(buf[2:]) if len(buf) > 2 else "")
-    texts = [t for t in texts if t]
-    best, best_text, i = 0, "", 0
-    while i < len(texts):
-        j = i
-        while j + 1 < len(texts) and texts[j + 1] == texts[i]:
-            j += 1
-        if j - i + 1 > best:
-            best, best_text = j - i + 1, texts[i]
-        i = j + 1
-    return best, best_text

@@ -33,6 +33,8 @@ python3 scripts/digest.py BV1xxx --out ./out --name 我的合集
 | 4. 渲染大纲 | `<stem>-大纲.md` | 纯本地，秒级 |
 | 5. 出两本 PDF | `<名>-mindmap.pdf` / `<名>-outline.pdf` | `fpdf2` `fonttools` |
 
+**步骤 4 和 5 都以第 3 步的 opml 为输入**，所以第 3 步跳过或失败时，大纲和 PDF 一并没有——这是正常的降级，不是漏做。1、2 两步不受影响，`--skip-mindmap` 仍然能拿到字幕和可读版。
+
 | 想干的事 | 命令 |
 |---|---|
 | 几期打成一本 | `digest.py BV1 BV2 BV3 --out ./out --name 合集名` |
@@ -119,7 +121,7 @@ python3 scripts/digest.py BV1xxx --out ./out --name 我的合集
 | 字幕列表为空 | 见上面「三种含义」，先跑 `doctor.py` |
 | 字幕内容跟视频完全不相干 | 走到老接口了。只能用 `wbi/v2` |
 | 报「判定串号，已丢弃」 | 上限校验生效，字幕不是这个视频的 |
-| 脑图那步 402 Insufficient Balance | DeepSeek 账户没余额了 |
+| 脑图那步 402 Insufficient Balance | DeepSeek 账户没余额了。加 `--skip-mindmap` 仍可得 srt + 可读版 |
 | 脑图那步连不上（deepseek） | socks5 代理没剥掉。urllib 不支持 socks5 |
 | 脑图那步 403（claude 后端） | 代理被剥过头了。它需要代理才能出网 |
 | 脑图正文为空 | `reasoning_effort` 没关，token 被思考吃光 |
