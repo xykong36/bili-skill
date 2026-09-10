@@ -8,7 +8,7 @@
 不是截断，是串号：同一个视频连查三次，拿到的是 461条/689s、86条/170s、614条/1063s
 三份内容完全不相干的字幕（"蔡徐坤被软封禁""维鲁斯"之类，跟视频毫无关系）。
 BBDown 走的就是这个老接口，所以它的 `--sub-only` 输出同样不可信，
-实测同一视频连跑三次拿到 326条 / 2053条(1小时) / 326条。详见 docs/字幕获取.md。
+实测同一视频连跑三次拿到 326条 / 2053条(1小时) / 326条。完整实测表见 skills/digesting-bilibili-videos/references/subtitle-api.md。
 """
 import json
 import os
@@ -74,9 +74,9 @@ def get_json_with_cookies(url, referer=None, timeout=30):
 
 
 def get_json(url, cookie=None, referer=None, retry=RETRY):
-    """GET 一个返回 JSON 的接口。走 curl 子进程，所以自动继承进程级 ALL_PROXY。
+    """GET 一个返回 JSON 的接口。走 curl 子进程。
 
-    登录流程也用它 —— 本机直连 B 站接口是不通的，必须跟其它请求走同一条出口。
+    登录流程也用它 —— 跟其它请求走同一条出口，行为才一致。
     """
     return _curl_json(url, cookie=cookie, referer=referer, retry=retry)
 
@@ -192,7 +192,3 @@ def view_by_bvid(bvid):
     d = _get(f"bvid={bvid}")
     return _shape(d) if d else None
 
-
-def view_by_aid(aid):
-    d = _get(f"aid={aid}")
-    return _shape(d) if d else None

@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 """下载 B 站视频的正片 mp4 + 封面 jpg + 元信息 info.json。
 
-    download.py BV1xxx [BV2 ...] --out DIR
+    bili.py download BV1xxx [BV2 ...] --out DIR
+
+本文件是模块，不是入口 —— 入口在 bili.py。
 
 设计上每个 BV 独立：一个失败不影响其它，重跑会跳过已完成的（幂等）。
 踩坑结论写在 SKILL.md，改这个文件前先读那一份。
 """
-import argparse
 import json
 import os
 import re
@@ -19,9 +20,7 @@ from pathlib import Path
 
 import _paths  # noqa: F401  只为把共享 lib 挂上 sys.path
 import bili_api
-
-BV_RE = re.compile(r"(BV[0-9A-Za-z]{8,12})")
-UNSAFE = str.maketrans({c: "_" for c in '/\\:*?"<>|'})
+from _common import collect_bvs, fresh, log, stem_for
 
 # 默认体积上限。超过就只出封面+info、不下正片，并明确报告出来。
 # 800MB ≈ 一小时 1080p 的量级；设这个默认值是为了让一批里混进来的
@@ -36,20 +35,6 @@ DOWNLOAD_TIMEOUT = int(os.environ.get("BILI_DOWNLOAD_TIMEOUT", "7200"))
 # 失配时 _video_size_mb 返回 None，调用方按「探不到体积」处理（照常下载），
 # 不会误判成 0MB，所以最坏情况是退化成不限体积，不会静默跳过。
 _SIZE_RE = re.compile(r'^\s*0\.\s*\[.*?\]\s*\[\d+x\d+\].*?\[~\s*([\d.]+)\s*(GB|MB)\]')
-
-
-def log(msg):
-    print(msg, flush=True)
-
-
-def safe_title(title):
-    return (title or "").translate(UNSAFE).strip()
-
-
-def parse_target(arg):
-    """从 BV 号、视频 URL、或带一堆 query 参数的分享链接里抠出 BV 号。"""
-    m = BV_RE.search(arg or "")
-    return m.group(1) if m else None
 
 
 # ---------- 外部依赖 ----------
@@ -212,7 +197,7 @@ def bbdown(bvid, dest_mp4, timeout=DOWNLOAD_TIMEOUT):
 
 
 def curl_download(url, dst, timeout=60):
-    """curl 下载。认进程级 ALL_PROXY（--proxy 会设它）。"""
+    """curl 下载。"""
     try:
         subprocess.run(["curl", "-s", "-L", "--max-time", str(timeout),
                         "-A", "Mozilla/5.0", "-o", str(dst), url],
@@ -243,21 +228,6 @@ def info_json(raw, bv):
     }
 
 
-def set_proxy(url):
-    """把代理写进进程级环境变量，BBDown / curl 都会自动继承。
-
-    BBDown 认 socks5://，**不认 socks5h://** —— 传 socks5h 它会直连。
-    """
-    if not url:
-        return
-    if url.startswith("socks5h://"):
-        log("  ! BBDown 不认 socks5h://，已改写成 socks5://")
-        url = "socks5://" + url[len("socks5h://"):]
-    for k in ("ALL_PROXY", "all_proxy", "HTTPS_PROXY", "https_proxy",
-              "HTTP_PROXY", "http_proxy"):
-        os.environ[k] = url
-
-
 # ---------- 单期 ----------
 def fetch_one(bv, out, max_mb, want_video, stem_title):
     raw = bili_api.view_raw(bv)
@@ -267,11 +237,11 @@ def fetch_one(bv, out, max_mb, want_video, stem_title):
         return False
 
     title = raw.get("title", "")
-    stem = bv
     if stem_title:
         pub = bili_api.view_by_bvid(bv)
-        date = pub["pubdate"] if pub else "00000000"
-        stem = f"{date}-{safe_title(title)}-{bv}"[:180]
+        stem = stem_for(bv, title, pub["pubdate"] if pub else None)
+    else:
+        stem = stem_for(bv)
 
     out.mkdir(parents=True, exist_ok=True)
     log(f"▶ {bv} {title[:50]}")
@@ -282,7 +252,7 @@ def fetch_one(bv, out, max_mb, want_video, stem_title):
                   encoding="utf-8")
 
     jpg = out / f"{stem}.jpg"
-    if jpg.is_file() and jpg.stat().st_size > 0:
+    if fresh(jpg):
         log("    · 封面已存在，跳过")
     elif raw.get("pic") and curl_download(raw["pic"], jpg):
         log(f"    ✓ 封面 {jpg.stat().st_size // 1024} KB")
@@ -324,44 +294,13 @@ def fetch_one(bv, out, max_mb, want_video, stem_title):
     return True
 
 
-def main():
-    ap = argparse.ArgumentParser(
-        description="下载 B 站视频的正片 + 封面 + 元信息",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="例：download.py BV1xxx BV2yyy --out ./out --max-mb 0")
-    ap.add_argument("targets", nargs="+", help="BV 号或视频链接，可给多个")
-    ap.add_argument("--out", default=".", help="输出目录（默认当前目录）")
-    ap.add_argument("--max-mb", type=int, default=DEFAULT_MAX_MB,
-                    help=f"正片体积上限 MB，超过就只出封面+info；0=不限（默认 {DEFAULT_MAX_MB}）")
-    ap.add_argument("--no-video", action="store_true",
-                    help="只出封面和 info.json，完全不下正片")
-    ap.add_argument("--stem-title", action="store_true",
-                    help="文件名用「日期-标题-BV」而不是光秃秃的 BV 号")
-    ap.add_argument("--proxy", default=None,
-                    help="给 BBDown 和 curl 挂代理，如 socks5://127.0.0.1:1080")
-    args = ap.parse_args()
+def run(targets, out, max_mb=DEFAULT_MAX_MB, want_video=True, stem_title=False):
+    """下载工作流。out 由调用方解析好传进来。返回退出码。"""
+    need = ("curl", "ffprobe", "ffmpeg", "BBDown") if want_video else ("curl",)
+    require_bins(*need)
 
-    need = ("curl", "ffprobe", "ffmpeg") if not args.no_video else ("curl",)
-    require_bins(*need, *(() if args.no_video else ("BBDown",)))
-    set_proxy(args.proxy)
-
-    bvs, bad = [], []
-    for t in args.targets:
-        bv = parse_target(t)
-        (bvs if bv else bad).append(bv or t)
-    for t in bad:
-        log(f"✗ 认不出 BV 号: {t}")
-    # 同一个 BV 给两遍就只做一遍，但保持用户给的顺序
-    bvs = list(dict.fromkeys(bvs))
-    if not bvs:
-        sys.exit("没有可处理的 BV 号")
-
-    out = Path(args.out).expanduser().resolve()
-    ok = sum(fetch_one(bv, out, args.max_mb, not args.no_video, args.stem_title)
-             for bv in bvs)
-    log(f"\n完成 {ok}/{len(bvs)} 期 -> {out}")
+    # bad 要计进退出码 —— 给了个打错的链接就该非零退出，和 digest 侧口径不同
+    bvs, bad = collect_bvs(targets)
+    ok = sum(fetch_one(bv, out, max_mb, want_video, stem_title) for bv in bvs)
+    log(f"\n完成 {ok}/{len(bvs)} 期（视频） -> {out}")
     return 0 if ok == len(bvs) and not bad else 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())

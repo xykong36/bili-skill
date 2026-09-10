@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""依赖自检。重点是区分「这个视频没字幕」和「你没登录 / 被限流」——
-这两种情况接口的返回是一样的（都是空列表），不探一下分不出来。
+"""依赖自检。两条工作流分组报告，各自结论独立。
 
-    doctor.py [--canary BV1xxx]
+重点是区分「这个视频没字幕」和「你没登录 / 被限流」—— 这两种情况接口
+的返回是一样的（都是空列表），不拿一个已知有字幕的 canary 探一下分不出来。
+
+退出码是个位掩码，好让调用方知道**是哪条**工作流不可用：
+
+    0  两条都能跑
+    1  下载不可用
+    2  嚼不可用
+    3  两条都不可用
+
+    bili.py doctor [--canary BV1xxx]
 """
-import argparse
 import os
 import shutil
 import sys
@@ -18,102 +26,163 @@ from lib import skill_config
 # 那时换成任意一个你确认有 AI 字幕的公开 BV 即可（--canary 或 BILI_CANARY）。
 DEFAULT_CANARY = os.environ.get("BILI_CANARY", "BV1zsXbBVE5d")
 
+DOWNLOAD, DIGEST = 1, 2
 
-# 可选依赖：缺了只是少一部分功能，不是跑不了。
-OPTIONAL = {"fpdf": "--skip-pdf", "fontTools": "--skip-pdf",
-            "DEEPSEEK_API_KEY": "--skip-mindmap"}
-# segno 只有「还没登录、需要扫码」时才用得上，单独处理（它没有对应的 flag）。
-SOFT = {"segno"}
-missing_optional = {}
+LOGIN_FIX = "跑 `python3 scripts/bili.py login` 扫码登录"
 
 
-def row(name, ok, detail, fix=""):
-    mark = "✓" if ok else ("!" if name in OPTIONAL or name in SOFT else "✗")
-    print(f"{mark} {name:<16} {detail}")
-    if not ok and fix:
-        print(f"                   -> {fix}")
-    if not ok and name in OPTIONAL:
-        missing_optional[name] = OPTIONAL[name]
-        return True          # 不算硬失败
-    if not ok and name in SOFT:
-        return True
-    return ok
+def _row(mark, name, detail, fix=""):
+    print(f"  {mark} {name:<17} {detail}")
+    if fix:
+        print(f"    {'':<17} -> {fix}")
 
 
-def main():
-    ap = argparse.ArgumentParser(description="digesting-bilibili-videos 依赖自检")
-    ap.add_argument("--canary", default=DEFAULT_CANARY,
-                    help="一个已知有官方中文 AI 字幕的 BV 号")
-    args = ap.parse_args()
+def ok_(name, detail):
+    _row("✓", name, detail)
+
+
+def soft(name, detail, fix=""):
+    """缺了只是少一部分功能，有 flag 能绕过 —— 不进掩码。"""
+    _row("!", name, detail, fix)
+
+
+def hard(name, detail, fix=""):
+    _row("✗", name, detail, fix)
+
+
+def skipped(name, why):
+    """没探，且说清为什么没探 —— 比探一次报个说明不了问题的失败要好。"""
+    _row("·", name, why)
+
+
+def run(canary=None):
+    canary = canary or DEFAULT_CANARY
     skill_config.load_dotenv()
-    all_ok = True
+    blocked = 0
 
+    # ---------------- 共用 ----------------
+    print("共用")
     p = shutil.which("curl")
-    all_ok &= row("curl", bool(p), p or "未找到", "系统自带，PATH 被裁了才会缺")
+    if p:
+        ok_("curl", p)
+    else:
+        hard("curl", "未找到", "系统自带，PATH 被裁了才会缺")
+        blocked |= DOWNLOAD | DIGEST
 
-    for mod, why, fix in [
-        ("fpdf", "出 PDF 用", "pip install fpdf2"),
-        ("fontTools", "字体实例化用", "pip install fonttools"),
+    meta = bili_api.view_by_bvid(canary)
+    if meta:
+        ok_("B站接口", f"{canary} -> {meta['title'][:34]}")
+    else:
+        hard("B站接口", f"canary {canary} 查不到",
+             "网络不通 / 被限流（限流时接口静默返回空，不报错）/ "
+             "这个 canary 视频被删了（换一个：--canary <任意公开BV>）")
+        blocked |= DOWNLOAD | DIGEST
+
+    ck = bili_api.cookie_file()
+
+    # ---------------- 下载 ----------------
+    print("\n下载")
+    for name, fix in [
+        ("BBDown", "https://github.com/nilaoda/BBDown/releases 下载后放进 PATH"),
+        ("ffprobe", "brew install ffmpeg"),
+        ("ffmpeg", "brew install ffmpeg"),
     ]:
+        p = shutil.which(name)
+        if p:
+            ok_(name, p)
+        else:
+            hard(name, "未找到", fix)
+            blocked |= DOWNLOAD
+
+    # 下载这条**不读** cookie：BBDown 自己去找 BBDown.data。缺了只是拿不到
+    # 高清流，不影响正确性 —— 所以这里是 !，同一行在下面的「嚼」里是 ✗。
+    if ck:
+        ok_("登录 cookie", str(ck))
+    else:
+        soft("登录 cookie", "未找到（下载公开视频不需要，但没有它只能拿到低清流）",
+             LOGIN_FIX)
+
+    # ---------------- 嚼 ----------------
+    print("\n嚼")
+    # 字幕接口没有 cookie 就只返回空列表，且不报错 —— 这条是硬依赖。
+    if ck:
+        ok_("登录 cookie", str(ck))
+    else:
+        hard("登录 cookie", "未找到 BBDown.data",
+             f"{LOGIN_FIX}。**字幕接口没有它只会返回空列表，而且不报错**")
+        blocked |= DIGEST
+
+    if not ck:
+        # 没 cookie 时探字幕接口必然是空的，报出来说明不了任何问题。
+        skipped("字幕接口", "跳过（没有 cookie，探了也说明不了问题）")
+    elif not meta:
+        skipped("字幕接口", "跳过（B站接口都不通）")
+    else:
+        subs = bili_api.subtitle_list(meta["aid"], meta["cid"], meta["bvid"])
+        zh = [l for l, _ in subs if l.endswith("zh")]
+        if zh:
+            ok_("字幕接口", f"canary 拿到 {', '.join(zh)} —— 登录态有效")
+        else:
+            hard("字幕接口",
+                 f"canary 也拿不到中文字幕（返回 {len(subs)} 条其它语言）",
+                 "这说明不是「某个视频恰好没字幕」，而是 cookie 失效或被限流。"
+                 "先 `bili.py login --force`；还不行就等一会儿再试")
+            blocked |= DIGEST
+
+    key = os.environ.get("DEEPSEEK_API_KEY")
+    if key:
+        ok_("DEEPSEEK_API_KEY", f"已设置（{key[:6]}…）")
+    else:
+        soft("DEEPSEEK_API_KEY", "未设置（脑图那步要用）",
+             "echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local"
+             "，或加 --skip-mindmap 只要字幕和阅读版")
+
+    for mod, why, fix in [("fpdf", "出 PDF 用", "pip install fpdf2"),
+                          ("fontTools", "字体实例化用", "pip install fonttools")]:
         try:
             __import__(mod)
-            row(mod, True, why)
+            ok_(mod, why)
         except ImportError:
-            all_ok &= row(mod, False, f"未安装（{why}；加 --skip-pdf 可以不要它）", fix)
+            soft(mod, f"未安装（{why}）", f"{fix}，或加 --skip-pdf")
 
     try:
         from lib import pdftext
-        row("中文字体", pdftext.VAR_FONT.is_file(),
-            str(pdftext.VAR_FONT) if pdftext.VAR_FONT.is_file() else "缺失")
+        if pdftext.VAR_FONT.is_file():
+            ok_("中文字体", str(pdftext.VAR_FONT))
+        else:
+            # 字体是随 skill 自带的，缺了说明装歪了。--skip-pdf 能绕过，
+            # 所以是 ! 不是 ✗ —— 但必须报出来，之前这行的结果是被丢掉的。
+            soft("中文字体", f"缺失：{pdftext.VAR_FONT}",
+                 "重装这个 skill，或设 BILI_SKILLS_FONT 指向一个中文 TTF，"
+                 "或加 --skip-pdf")
     except ImportError:
-        pass
+        skipped("中文字体", "跳过（fpdf/fontTools 没装，查不了）")
 
-    key = os.environ.get("DEEPSEEK_API_KEY")
-    all_ok &= row("DEEPSEEK_API_KEY", bool(key),
-                  f"已设置（{key[:6]}…）" if key else "未设置",
-                  "echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local"
-                  "（或加 --skip-mindmap 只要字幕和可读版）")
-
+    # ---------------- 登录 ----------------
+    print("\n登录")
     try:
         import segno  # noqa: F401
-        row("segno", True, "扫码登录用")
+        ok_("segno", "扫码登录用")
     except ImportError:
-        row("segno", False, "未安装（扫码登录用）", "pip install segno")
+        soft("segno", "未安装（扫码登录时才要）", "pip install segno")
 
-    ck = bili_api.cookie_file()
-    all_ok &= row("登录 cookie", bool(ck), str(ck) if ck else "未找到 BBDown.data",
-                  "跑 `python3 scripts/login.py` 扫码登录。"
-                  "**字幕接口没有它就只会返回空列表**")
-
+    # ---------------- 结论 ----------------
     print()
-    meta = bili_api.view_by_bvid(args.canary)
-    if not meta:
-        print(f"✗ 连不上 B 站接口（canary {args.canary} 查不到）")
-        print("   -> 网络不通 / 需要代理 / 被限流 / 这个 canary 视频被删了")
-        return 1
-    row("B站接口", True, f"{args.canary} -> {meta['title'][:36]}")
+    say = {0: "两条工作流都能跑。",
+           DOWNLOAD: "嚼可用；**下载**不可用，见上面的 ✗。",
+           DIGEST: "下载可用；**嚼**不可用，见上面的 ✗。",
+           DOWNLOAD | DIGEST: "两条都不可用，见上面的 ✗。"}[blocked]
+    print(say)
+    print("带 ! 的是可选项：缺了用对应的 flag 绕过，核心链路不受影响。")
+    return blocked
 
-    subs = bili_api.subtitle_list(meta["aid"], meta["cid"], meta["bvid"])
-    zh = [l for l, _ in subs if l.endswith("zh")]
-    if zh:
-        row("字幕接口", True, f"canary 拿到 {', '.join(zh)} —— 登录态有效")
-    else:
-        all_ok = False
-        row("字幕接口", False,
-            f"canary 也拿不到中文字幕（返回 {len(subs)} 条其它语言）",
-            "这说明不是「某个视频恰好没字幕」，而是 cookie 失效或被限流。"
-            "先 `python3 scripts/login.py --force` 重新登录；还不行就等一会儿再试。")
 
-    print()
-    if not all_ok:
-        print("有 ✗，那是硬依赖，先补齐再跑 digest.py。")
-    elif missing_optional:
-        flags = " ".join(sorted(set(missing_optional.values())))
-        print(f"核心链路就绪。带 ! 的是可选项，缺了就加 {flags} 跑，"
-              f"仍然能拿到字幕和可读版。")
-    else:
-        print("全部就绪。")
-    return 0 if all_ok else 1
+def main(argv=None):
+    import argparse
+    ap = argparse.ArgumentParser(description="digesting-bilibili-videos 自检")
+    ap.add_argument("--canary", default=None,
+                    help="一个已知有官方中文 AI 字幕的 BV 号")
+    return run(ap.parse_args(argv).canary)
 
 
 if __name__ == "__main__":

@@ -500,21 +500,3 @@ def _write(pdf, dest):
     tmp = dest.with_suffix(".tmp")
     pdf.output(str(tmp))
     shutil.move(str(tmp), str(dest))
-
-
-def main():
-    """独立入口：由 digest.run 用装了 fpdf2 的 venv 拉起。
-
-    用法: pdfbook.py <manifest.json> <out_dir> <channel_name>
-    manifest.json 就是 collect() 落盘的 entries（含 opml/title/pubdate/bvid/nodes/subtitle）。
-    """
-    import json
-    if len(sys.argv) != 4:
-        sys.exit("用法: pdfbook.py <manifest.json> <out_dir> <channel_name>")
-    manifest, out_dir, channel_name = sys.argv[1], Path(sys.argv[2]), sys.argv[3]
-    entries = json.loads(Path(manifest).read_text(encoding="utf-8"))
-    render_channel(entries, out_dir, channel_name)
-
-
-if __name__ == "__main__":
-    main()

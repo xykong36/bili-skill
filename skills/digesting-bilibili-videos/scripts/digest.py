@@ -1,35 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""B 站官方 AI 字幕 -> 可读版 -> 脑图 OPML -> 大纲 -> 两本中文 PDF。
+"""B 站官方 AI 字幕 -> 阅读版 -> 脑图 OPML -> 大纲 -> 两本中文 PDF。
 
-    digest.py BV1xxx [BV2 ...] --out DIR [--name 书名]
-    digest.py --srt path/to.srt --title 标题 --out DIR
+    bili.py digest BV1xxx [BV2 ...] --out DIR [--name 书名]
+    bili.py digest --srt path/to.srt --title 标题 --out DIR
+
+本文件是模块，不是入口 —— 入口在 bili.py。
 
 五步各自幂等：产物在就跳过，可以随时中断续跑。踩坑结论在 SKILL.md。
 """
-import argparse
-import json
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
 
 import _paths  # noqa: F401  把 <plugin>/lib 和 <skill> 挂上 sys.path
 import bili_api
+from _common import collect_bvs, fresh, log, safe_title, stem_for
 from lib import opml_lib, pdf_content, skill_config, srt as srtlib
 
-BV_RE = re.compile(r"(BV[0-9A-Za-z]{8,12})")
-UNSAFE = str.maketrans({c: "_" for c in '/\\:*?"<>|'})
 LIB = Path(__file__).resolve().parent.parent / "lib"
-
-
-def log(msg):
-    print(msg, flush=True)
-
-
-def safe_title(t):
-    return (t or "").translate(UNSAFE).strip()
 
 
 # ---------- 1. 字幕 ----------
@@ -85,16 +75,16 @@ def fetch_subtitle(meta, dest):
     return True
 
 
-# ---------- 2. 可读版 ----------
+# ---------- 2. 阅读版 ----------
 def make_readable(srt_path, md_path, title):
     r = subprocess.run([sys.executable, str(LIB / "srt_to_md.py"), str(srt_path),
                         "-o", str(md_path), "--title", title],
                        stdin=subprocess.DEVNULL, capture_output=True,
                        text=True, timeout=300)
     if r.returncode != 0 or not md_path.is_file():
-        log(f"    ✗ 可读版生成失败: {r.stderr.strip()[-300:]}")
+        log(f"    ✗ 阅读版生成失败: {r.stderr.strip()[-300:]}")
         return False
-    log(f"    ✓ 可读版 {md_path.stat().st_size // 1024} KB")
+    log(f"    ✓ 阅读版 {md_path.stat().st_size // 1024} KB")
     return True
 
 
@@ -102,10 +92,7 @@ def make_readable(srt_path, md_path, title):
 def make_mindmap(md_path, opml_path, duration, workdir):
     """拉起 gen_mindmap.py 出 OPML。
 
-    代理要按后端裁剪（env_for_backend）：DeepSeek 走 urllib，urllib 不支持 socks5，
-    所以只剥 socks 代理；但**别一刀切全剥** —— claude 后端是普通 HTTPS 客户端，
-    在靠代理出网的机器上剥光代理它会拿到 403（实测踩过）。
-    --duration 也必须给：没有它就无法判断「补出来的小时位有没有超出视频长度」，
+    --duration 必须给：没有它就无法判断「补出来的小时位有没有超出视频长度」，
     gen_mindmap 会放弃修复漏写小时位的时间戳，章节顺序会乱。
     """
     prefix = opml_path.stem
@@ -115,8 +102,7 @@ def make_mindmap(md_path, opml_path, duration, workdir):
          "--model", skill_config.MINDMAP_MODEL,
          "--duration", str(int(duration or 0))],
         cwd=workdir, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-        timeout=skill_config.MINDMAP_TIMEOUT,
-        env=skill_config.env_for_backend(skill_config.MINDMAP_BACKEND))
+        timeout=skill_config.MINDMAP_TIMEOUT)
     produced = Path(workdir) / f"{prefix}.opml"
     if r.returncode != 0 or not produced.is_file():
         tail = (r.stderr or r.stdout).strip()[-400:]
@@ -173,20 +159,19 @@ def digest_one(bv, out, skip_mindmap):
         log(f"⊘ {bv}: 分 P 视频（{meta['pages']} P），本 skill 不处理")
         return False, None
 
-    title = safe_title(meta["title"])
-    stem = f"{meta['pubdate']}-{title}-{bv}"[:180]
+    stem = stem_for(bv, meta["title"], meta["pubdate"])
     log(f"▶ {bv} {meta['title'][:50]}")
     out.mkdir(parents=True, exist_ok=True)
 
     srt_path = out / f"{stem}.srt"
-    if srt_path.is_file() and srt_path.stat().st_size > 0:
+    if fresh(srt_path):
         log("    · 字幕已存在，跳过")
     elif not fetch_subtitle(meta, srt_path):
         return False, None
 
     md_path = out / f"{stem}-阅读版.md"
-    if md_path.is_file() and md_path.stat().st_size > 0:
-        log("    · 可读版已存在，跳过")
+    if fresh(md_path):
+        log("    · 阅读版已存在，跳过")
     elif not make_readable(srt_path, md_path, meta["title"]):
         return False, None
 
@@ -194,7 +179,7 @@ def digest_one(bv, out, skip_mindmap):
         return True, None
 
     opml_path = out / f"{stem}.opml"
-    if opml_path.is_file() and opml_path.stat().st_size > 0:
+    if fresh(opml_path):
         log("    · 脑图已存在，跳过")
     elif not make_mindmap(md_path, opml_path, meta.get("duration"), out):
         return False, None
@@ -244,67 +229,36 @@ def digest_local_srt(srt_path, out, title, duration, skip_mindmap):
                   "bvid": "", "nodes": n, "subtitle": f"{n} 个节点"}
 
 
-def main():
-    ap = argparse.ArgumentParser(
-        description="B 站官方 AI 字幕 -> 可读版 / 脑图 / 大纲 / PDF",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="例：digest.py BV1xxx BV2yyy --out ./out --name 我的合集")
-    ap.add_argument("targets", nargs="*", help="BV 号或视频链接")
-    ap.add_argument("--srt", help="改用本地 srt 文件作为输入（不联网抓字幕）")
-    ap.add_argument("--title", help="配合 --srt 用的标题")
-    ap.add_argument("--duration", type=int, default=0,
-                    help="配合 --srt 用的视频时长（秒）；不给就按字幕末尾推算")
-    ap.add_argument("--out", default=".", help="输出目录（默认当前目录）")
-    ap.add_argument("--name", default="B站合集", help="PDF 书名")
-    ap.add_argument("--skip-pdf", action="store_true", help="不出 PDF（省掉 fpdf2 依赖）")
-    ap.add_argument("--skip-mindmap", action="store_true",
-                    help="只要字幕和可读版，不调 LLM（不需要 DEEPSEEK_API_KEY）")
-    args = ap.parse_args()
-
-    if not args.targets and not args.srt:
-        ap.error("给几个 BV 号，或者用 --srt 指定本地字幕文件")
-
+def run(targets, out, name="B站合集", skip_mindmap=False, skip_pdf=False,
+        srt=None, title=None, duration=0):
+    """嚼工作流。out 由调用方解析好传进来。返回退出码。"""
     skill_config.load_dotenv()
-    if not args.skip_mindmap and skill_config.MINDMAP_BACKEND == "deepseek" \
+    if not skip_mindmap and skill_config.MINDMAP_BACKEND == "deepseek" \
             and not os.environ.get("DEEPSEEK_API_KEY"):
         sys.exit("缺 DEEPSEEK_API_KEY（脑图那步要用）。\n"
                  "  -> echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local\n"
-                 "  或者加 --skip-mindmap，只要字幕和可读版。")
+                 "  或者加 --skip-mindmap，只要字幕和阅读版。")
 
-    out = Path(args.out).expanduser().resolve()
     entries, done = [], 0
-    if args.srt:
-        ok, e = digest_local_srt(args.srt, out, args.title, args.duration,
-                                 args.skip_mindmap)
+    if srt:
+        ok, e = digest_local_srt(srt, out, title, duration, skip_mindmap)
         done += bool(ok)
         if e:
             entries.append(e)
         total = 1
     else:
-        bvs = []
-        for t in args.targets:
-            m = BV_RE.search(t)
-            if m:
-                bvs.append(m.group(1))
-            else:
-                log(f"✗ 认不出 BV 号: {t}")
-        bvs = list(dict.fromkeys(bvs))
-        if not bvs:
-            sys.exit("没有可处理的 BV 号")
+        # bad 这里只告警不计进退出码 —— 和 download 侧口径不同，见 _common
+        bvs, _bad = collect_bvs(targets)
         total = len(bvs)
         for bv in bvs:
-            ok, e = digest_one(bv, out, args.skip_mindmap)
+            ok, e = digest_one(bv, out, skip_mindmap)
             done += bool(ok)
             if e:
                 entries.append(e)
 
-    if entries and not args.skip_pdf and not args.skip_mindmap:
+    if entries and not skip_pdf and not skip_mindmap:
         log(f"\n出 PDF（{len(entries)} 期）…")
-        make_pdf(entries, out, args.name)
+        make_pdf(entries, out, name)
 
-    log(f"\n完成 {done}/{total} 期 -> {out}")
+    log(f"\n完成 {done}/{total} 期（字幕/脑图） -> {out}")
     return 0 if done == total else 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())

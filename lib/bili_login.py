@@ -180,18 +180,11 @@ def main(argv=None):
                     help="二维码产出形式（默认 both）")
     ap.add_argument("--qr-out", default="bili-login-qr.png",
                     help="二维码 PNG 落在哪（默认当前目录）")
-    ap.add_argument("--proxy", default=None,
-                    help="给 B 站请求挂代理，如 socks5://127.0.0.1:1080")
     ap.add_argument("--force", action="store_true",
                     help="已经登录了也重新登录")
     ap.add_argument("--debug", action="store_true",
                     help="失败时多打一点诊断（**只打字段名，绝不打值**）")
     args = ap.parse_args(argv)
-
-    if args.proxy:
-        for k in ("ALL_PROXY", "all_proxy", "HTTPS_PROXY", "https_proxy",
-                  "HTTP_PROXY", "http_proxy"):
-            os.environ[k] = args.proxy
 
     if not args.force:
         have = logged_in()
@@ -202,7 +195,7 @@ def main(argv=None):
 
     url, key = generate()
     if not url or not key:
-        log("✗ 申请二维码失败。网络不通 / 需要代理 / B 站接口在抽风。")
+        log("✗ 申请二维码失败。网络不通 / B 站接口在抽风。")
         return 1
 
     png_path = Path(args.qr_out).expanduser()

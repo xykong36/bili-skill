@@ -5,7 +5,10 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 
 # 二进制（字体）不参与扫描，否则会命中随机字节。
-EXCLUDE=(--exclude-dir=.git --exclude=*.ttf --exclude=*.otf --exclude=check-no-secrets.sh)
+# docs/skill-best-practices-sources/ 是官方文档的原文存档，里面的 CDN 哈希、
+# 示例路径会误伤三条规则，且不是我们写的内容，整目录跳过。
+EXCLUDE=(--exclude-dir=.git --exclude-dir=skill-best-practices-sources \
+         --exclude=*.ttf --exclude=*.otf --exclude=check-no-secrets.sh)
 
 fail=0
 hit() {  # hit <说明> <正则>
