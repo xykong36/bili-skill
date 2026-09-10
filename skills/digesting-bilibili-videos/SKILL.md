@@ -19,23 +19,17 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor
 
 | 用户想要 | 走 | 命令 |
 |---|---|---|
-| 本地存一份视频 / 封面 / 播放量 | 下载 | `bili.py download BV1xxx --out ./out` |
-| 字幕、逐字稿、文章、脑图、大纲、PDF | 嚼 | `bili.py digest BV1xxx --out ./out --name 合集名` |
-| 两个都要 | 一条命令 | `bili.py digest BV1xxx --out ./out --with-video` |
+| 本地存一份视频 / 封面 / 播放量 | 下载 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py download BV1xxx --out ./out` |
+| 字幕、逐字稿、文章、脑图、大纲、PDF | 嚼 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1xxx --out ./out --name 合集名` |
+| 两个都要 | 一条命令 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1xxx --out ./out --with-video` |
 
-命令一律带 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py` 前缀——**Bash 工具的工作目录是用户的项目目录，不是 skill 目录**，写相对路径会找不到文件。
+上面的命令是完整形式，**照抄，别简写成 `bili.py ...` 或 `scripts/bili.py ...`**。
+两个理由：Bash 工具的工作目录是用户的项目目录、不是 skill 目录，相对路径会找不到文件；
+而 frontmatter 里 `allowed-tools` 的规则匹配的正是这个完整形式，简写会多一次权限弹窗。
 
-## 什么时候用这个 skill
+## 不适用
 
-- 要把某个 B 站视频存到本地
-- 要视频封面或播放量/点赞数等元信息
-- 下下来的 mp4 打不开、没声音、播到一半就断
-- 要某个 B 站视频的**字幕 / 逐字稿**
-- 想把一期视频变成能读的文章、思维导图、内容大纲
-- 想把几期打包成一本 PDF 通读
-- 抓字幕拿到空结果，或者拿到的字幕内容跟视频对不上
-
-**不适用**：整个 UP 主空间的批量增量抓取（只做单期/少量 BV）；没有官方 AI 字幕的视频——**这个 skill 不做语音转录**，遇到就明确报告跳过。
+整个 UP 主空间的批量增量抓取（只做单期/少量 BV）；没有官方 AI 字幕的视频——**这个 skill 不做语音转录**，遇到就明确报告跳过。
 
 ---
 
@@ -45,13 +39,13 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor
 
 | 想干的事 | 命令 |
 |---|---|
-| 下一期 | `bili.py download BV1xxx --out ./out` |
-| 下几期 | `bili.py download BV1xxx BV2yyy --out ./out` |
-| 直接粘链接（**记得加引号**，`?`/`&` 会被 shell 吃掉） | `bili.py download "https://www.bilibili.com/video/BV1xxx?p=1" --out ./out` |
+| 下一期 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py download BV1xxx --out ./out` |
+| 下几期 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py download BV1xxx BV2yyy --out ./out` |
+| 直接粘链接（**记得加引号**，`?`/`&` 会被 shell 吃掉） | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py download "https://www.bilibili.com/video/BV1xxx?p=1" --out ./out` |
 | 不限体积（默认上限 800MB，超了只出封面+info） | `--max-mb 0` |
 | 只要封面和元信息，不下正片 | `--no-video` |
 | 文件名带日期和标题 | `--stem-title` |
-| 选项可以随便叠 | `bili.py download BV1xxx --out /tmp/x --no-video --stem-title` |
+| 选项可以随便叠 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py download BV1xxx --out /tmp/x --no-video --stem-title` |
 
 重跑是幂等的：已存在且校验通过的产物会跳过，坏的会被删掉重下。
 
@@ -70,7 +64,7 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor
 
 ## 别直接下到目标盘
 
-macOS 在 exFAT / 网络盘上会给分片配 `._` 伴生文件，合并时被一起并进去，产出 `moov atom not found` 的废文件。`bili.py download` 一律先下到 `$TMPDIR` 再 `shutil.move` 过去。**自己写下载逻辑的话这步不能省**，细节见上面那个 reference。
+macOS 在 exFAT / 网络盘上会给分片配 `._` 伴生文件，合并时被一起并进去，产出 `moov atom not found` 的废文件。下载这条一律先下到 `$TMPDIR` 再 `shutil.move` 过去。**自己写下载逻辑的话这步不能省**，细节见上面那个 reference。
 
 ## 限流是静默的
 
@@ -98,10 +92,10 @@ B 站限流时接口**返回空结果，不报错**。所以「查不到这个�
 
 | 想干的事 | 命令 |
 |---|---|
-| 几期打成一本 | `bili.py digest BV1 BV2 BV3 --out ./out --name 合集名` |
+| 几期打成一本 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1 BV2 BV3 --out ./out --name 合集名` |
 | 只要字幕和阅读版，不花钱 | `--skip-mindmap` |
 | 不要 PDF | `--skip-pdf` |
-| 已经有 srt 了（给了 `--srt` 就**忽略** BV 号，两者不叠加） | `bili.py digest --srt a.srt --title 标题 --out ./out` |
+| 已经有 srt 了（给了 `--srt` 就**忽略** BV 号，两者不叠加） | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest --srt a.srt --title 标题 --out ./out` |
 
 ## 抓字幕：只能走 `wbi/v2`
 
@@ -121,7 +115,7 @@ B 站限流时接口**返回空结果，不报错**。所以「查不到这个�
 2. **没登录 / cookie 过期**
 3. 被限流
 
-**别直接报告「这个视频没有字幕」。** `bili.py doctor` 会**自动**拿一个内置的、已知有官方字幕的 canary 视频探一次，以此区分（换一个用 `--canary BV...` 或 `BILI_CANARY` 环境变量）：canary 也拿不到 = 是你的登录态或限流问题，不是视频的问题。
+**别直接报告「这个视频没有字幕」。** `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor` 会**自动**拿一个内置的、已知有官方字幕的 canary 视频探一次，以此区分（换一个用 `--canary BV...` 或 `BILI_CANARY` 环境变量）：canary 也拿不到 = 是你的登录态或限流问题，不是视频的问题。
 
 脚本这边：抓不到字幕的那一期算失败、**跳过后面四步**，但**不中断整批**——
 剩下的 BV 照常处理，结尾的「完成 N/M 期」会把它计进去。所以一批里少了几期
@@ -172,7 +166,7 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py login       # --force 换账号 / �
 可写的目录。
 
 `BBDown.data` 等价于你的 B 站账号登录态。**别提交进任何仓库、别分享。**
-`bili.py login` 会把它权限设成 0600，覆盖前先备份成 `.bak`。
+登录脚本会把它权限设成 0600，覆盖前先备份成 `.bak`。
 
 ---
 
@@ -181,7 +175,7 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py login       # --force 换账号 / �
 | 要什么 | 哪条工作流用 | 怎么装 |
 |---|---|---|
 | curl | 两条都要 | 系统自带 |
-| `BBDown.data` 登录态 | 两条都要（下载没它只能拿低清流；字幕没它只返回空列表） | `pip install segno` 后跑 `bili.py login` 扫码 |
+| `BBDown.data` 登录态 | 两条都要（下载没它只能拿低清流；字幕没它只返回空列表） | `pip install segno` 后跑 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py login` 扫码 |
 | BBDown | 下载 | https://github.com/nilaoda/BBDown/releases 放进 PATH |
 | ffmpeg / ffprobe | 下载（完整性校验） | `brew install ffmpeg` |
 | `DEEPSEEK_API_KEY` | 嚼第 3 步 | `echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local`（`--skip-mindmap` 可绕过） |
@@ -190,7 +184,7 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py login       # --force 换账号 / �
 
 下载、抓字幕、阅读版这几步都是**纯标准库**的。
 
-**Python 3.9+**（已在 3.9 和 3.12 上实测跑通全链路）。注意：**agent 沙箱里的 `python3` 可能跟你交互式终端里的不是同一个**（pyenv/conda 的 shims 靠 shell 启动脚本注入 PATH，沙箱常起裸 shell）。依赖要装在**跑脚本的那个 python** 里；不确定就先跑 `bili.py doctor`，它报什么缺什么就是那个 python 的实情。
+**Python 3.9+**（已在 3.9 和 3.12 上实测跑通全链路）。注意：**agent 沙箱里的 `python3` 可能跟你交互式终端里的不是同一个**（pyenv/conda 的 shims 靠 shell 启动脚本注入 PATH，沙箱常起裸 shell）。依赖要装在**跑脚本的那个 python** 里；不确定就先跑 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor`，它报什么缺什么就是那个 python 的实情。
 
 # 产物
 
@@ -224,6 +218,11 @@ out/
 `--name` 只被第 5 步的两本 PDF 用（默认 `B站合集`）。加了 `--skip-pdf`
 或 `--skip-mindmap` 时它没有任何作用，可以不给。
 
+**但 PDF 这层不幂等，会覆盖。** srt / 阅读版 / opml / 大纲的文件名都带 BV，
+重跑安全；两本 PDF 的文件名只由 `--name` 决定，内容是**这一次**给的那批 BV。
+所以往同一个 `--out` 里再嚼一期而不换 `--name`，上一本会被悄悄覆盖掉，
+里面只剩新的这期。**要么一次把所有 BV 都给全，要么每本换一个 `--name`。**
+
 # 常见问题
 
 | 现象 | 原因 |
@@ -232,9 +231,9 @@ out/
 | 下下来没有声音 | 音视频没合流完。`verify_mp4` 会拦住并删掉 |
 | 播到一半就断 | 截断的文件。只有 pts 覆盖判据看得出来 |
 | 「查不到视频信息」 | BV 写错 / 视频被删 / **被限流**（限流是静默的） |
-| 清晰度很低 | 没登录。跑 `bili.py login` |
+| 清晰度很低 | 没登录。跑 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py login` |
 | 探不到体积 | BBDown 输出格式变了，正则失配。会退化成不限体积照常下载，不会静默跳过 |
-| 字幕列表为空 | 见「三种含义」，先跑 `bili.py doctor` |
+| 字幕列表为空 | 见「三种含义」，先跑 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor` |
 | 字幕内容跟视频完全不相干 | 走到老接口了。只能用 `wbi/v2` |
 | 报「判定串号，已丢弃」 | 上限校验生效，字幕不是这个视频的 |
 | 没设 `DEEPSEEK_API_KEY` 又没加 `--skip-mindmap` | **开跑前就退出**并告诉你两个选项，不会跑到一半才炸、也不会静默降级 |
