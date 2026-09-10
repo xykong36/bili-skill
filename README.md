@@ -52,7 +52,7 @@ ls -d ~/.claude/skills/digesting-bilibili-videos/scripts/bili.py
 {
   "permissions": {
     "allow": [
-      "Bash(python3 /Users/你/.claude/plugins/cache/bili-skills/bili-skills/0.4.0/skills/digesting-bilibili-videos/scripts/bili.py *)"
+      "Bash(python3 /Users/你/.claude/plugins/cache/bili-skills/bili-skills/1.0.0/skills/digesting-bilibili-videos/scripts/bili.py *)"
     ]
   }
 }
