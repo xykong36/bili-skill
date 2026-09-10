@@ -1,0 +1,11 @@
+{
+  "skills": ["digesting-bilibili-videos"],
+  "query": "把 BV1zsXbBVE5d 这期整理成脑图和大纲",
+  "expected_behavior": [
+    "走 digest 工作流",
+    "不先去下载 mp4 —— 字幕从 wbi/v2 接口拿，全程不碰视频文件",
+    "报告产物时文件名说的是 -阅读版.md，不是 -可读版.md",
+    "知道第 4、5 步依赖第 3 步的 opml：跳过脑图时大纲和 PDF 一并没有，这是正常降级不是漏做"
+  ],
+  "why": "「download 是 digest 的前置」是合并后最容易产生的误解。文件名那条是真踩过的坑：正文写「可读版」而产物叫「阅读版」，agent 照正文找文件会扑空。"
+}

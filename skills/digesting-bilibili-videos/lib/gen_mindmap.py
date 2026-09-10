@@ -31,7 +31,13 @@ gen_mindmap.py —— 字幕文件 → OPML 思维导图(一个脚本跑完全�
 依赖: python3(仅标准库);  claude 后端需已登录的 claude CLI;  deepseek 后端需 DEEPSEEK_API_KEY
 """
 import sys, os, re, subprocess, json, urllib.request, urllib.error
+from pathlib import Path
 from xml.sax.saxutils import escape
+
+# 这个文件既被 digest 当子进程拉起，也支持单独跑，所以自己把 <skill> 挂上
+# sys.path（和 pdftext.py 同一套做法）。
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from lib import skill_config
 
 INDENT = 2  # 大纲每级缩进空格数
 NEAR_PARENT_SEC = 600  # 补小时位后允许离父节点多远(秒)，见 repair_timestamps
@@ -260,39 +266,12 @@ def derive_title(infile):
     m = re.match(r"^BV[0-9A-Za-z]+_(.+)$", base)
     return m.group(1) if m else base
 
-# ---------- .env.local 加载 ----------
-def load_dotenv():
-    """从「当前目录逐级向上」+「脚本所在目录」查找 .env.local / .env, 填充缺失的环境变量。
-    就近优先; 已存在的真实环境变量不被覆盖。"""
-    dirs, d = [], os.path.abspath(os.getcwd())
-    while True:
-        dirs.append(d)
-        parent = os.path.dirname(d)
-        if parent == d:
-            break
-        d = parent
-    dirs.append(os.path.dirname(os.path.abspath(__file__)))
-    seen = set()
-    for d in dirs:
-        for name in (".env.local", ".env"):
-            p = os.path.join(d, name)
-            if p in seen or not os.path.isfile(p):
-                continue
-            seen.add(p)
-            for line in open(p, encoding="utf-8"):
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                if line.startswith("export "):
-                    line = line[len("export "):]
-                k, v = line.split("=", 1)
-                k, v = k.strip(), v.strip().strip('"').strip("'")
-                if k and k not in os.environ:
-                    os.environ[k] = v
 
 # ---------- main ----------
 def main():
-    load_dotenv()
+    # 「脚本自身目录」要显式传进去：单独拉起 gen_mindmap 时支持把
+    # .env.local 放在它旁边，统一实现时不能把这个位置弄丢。
+    skill_config.load_dotenv(os.path.dirname(os.path.abspath(__file__)))
     argv = sys.argv[1:]
     positional, model, backend, use_outline, duration = [], None, "deepseek", False, None
     i = 0

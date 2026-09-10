@@ -5,3 +5,6 @@ __pycache__/
 BBDown.data
 /out/
 .DS_Store
+
+# 官方文档原文存档，本地参考用；是别人的内容，不进这个公开仓。
+/docs/skill-best-practices-sources/

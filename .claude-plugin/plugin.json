@@ -1,7 +1,7 @@
 {
   "name": "bili-skills",
   "description": "Download bilibili videos and turn their official AI subtitles into readable transcripts, OPML mindmaps, outlines and searchable Chinese PDFs",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": {
     "name": "xiangyu"
   },

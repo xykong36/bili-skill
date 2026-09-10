@@ -136,10 +136,8 @@ def build_markdown(paragraphs, title):
 
 
 def main():
-    default_srt = os.path.join(os.path.dirname(os.path.abspath(__file__)), "字幕-OCR画面识别.srt")
-
     parser = argparse.ArgumentParser(description="SRT -> 阅读友好 Markdown")
-    parser.add_argument("srt", nargs="?", default=default_srt, help="输入 SRT 文件")
+    parser.add_argument("srt", help="输入 SRT 文件")
     parser.add_argument("-o", "--output", help="输出 Markdown 文件（默认与输入同名 .md）")
     parser.add_argument("--title", help="文档标题（默认取文件所在目录名/文件名）")
     args = parser.parse_args()

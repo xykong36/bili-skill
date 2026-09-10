@@ -44,7 +44,7 @@ x/player/wbi/v2?aid=<aid>&cid=<cid>     -> data.subtitle.subtitles[]{lan, subtit
 
 要点：
 
-- **必须带 cookie**。不带的话接口返回 `code=0` 但 `subtitles` 是**空数组**——静默的空，不是报错。cookie 用 `scripts/login.py` 或 BBDown 登录后写的 `BBDown.data`（在 BBDown 可执行文件旁边；`lib/bili_api.py: cookie_file()` 负责找，`BILI_COOKIE_FILE` 可覆盖）。
+- **必须带 cookie**。不带的话接口返回 `code=0` 但 `subtitles` 是**空数组**——静默的空，不是报错。cookie 用 `bili.py login` 或 BBDown 登录后写的 `BBDown.data`（在 BBDown 可执行文件旁边；`lib/bili_api.py: cookie_file()` 负责找，`BILI_COOKIE_FILE` 可覆盖）。
 - **不用做 wbi 签名**，带 `Cookie` + `Referer: https://www.bilibili.com/video/<BV>` + 常规 UA 就行。
 - `subtitle_url` 是**协议相对**的（`//aisubtitle.hdslb.com/...`），要补 `https:`。
 - URL 带 `auth_key`，**有时效，别缓存**。
@@ -65,7 +65,7 @@ x/player/wbi/v2?aid=<aid>&cid=<cid>     -> data.subtitle.subtitles[]{lan, subtit
 
 - **上限那道必须有**：就是它逮出了老接口串号的 6 期。改走新接口后理论上不该再触发，但这是唯一能自动发现「拿错字幕」的手段，别删。
 - **下限为什么不是 1.00**：片尾常有几十秒无语音的音乐/挂件段，最后一条字幕本来就不顶到末尾。
-- **下限为什么不是 0.70**：那会接受一份漏掉整整 30% 视频的字幕——12 分钟的视频只有 8 分半有字幕也算合格，下游可读版和脑图跟着缺一大段。
+- **下限为什么不是 0.70**：那会接受一份漏掉整整 30% 视频的字幕——12 分钟的视频只有 8 分半有字幕也算合格，下游阅读版和脑图跟着缺一大段。
 
 两个阈值都可以用环境变量 `BILI_MISMATCH_MAX` / `BILI_COVERAGE_MIN` 覆盖，但改之前先读上面三条理由。
 
@@ -73,7 +73,7 @@ x/player/wbi/v2?aid=<aid>&cid=<cid>     -> data.subtitle.subtitles[]{lan, subtit
 
 | 现象 | 多半是 |
 |---|---|
-| 字幕列表返回空数组 | 没带 cookie / 登录过期。跑一次 `python3 scripts/login.py --force` 刷新 `BBDown.data`，再跑 `doctor.py` |
+| 字幕列表返回空数组 | 没带 cookie / 登录过期。跑一次 `python3 scripts/bili.py login --force` 刷新 `BBDown.data`，再跑 `bili.py doctor` |
 | 字幕内容跟视频对不上 | 走到老接口了。检查 `PLAYER_API` 是不是被改回 `x/player/v2`，或有人改回用 BBDown 抓 |
 | 日志报「判定串号，已丢弃」 | 上限校验生效了。先确认走的是 `wbi/v2` |
 | 接口正常但确实没有中文 | 该视频没有官方 AI 字幕——不是所有视频都有。本 skill 到此为止，不做语音转录 |
