@@ -140,6 +140,15 @@ login.py 会把它权限设成 0600，覆盖前先备份成 `.bak`。
 
 字幕、可读版两步是**纯标准库**的。
 
+**Python 3.9+**（已在 3.9 和 3.12 上实测跑通全链路）。
+
+注意一个坑：**agent 沙箱里的 `python3` 可能跟你交互式终端里的不是同一个**。
+pyenv / conda 的 shims 靠 shell 启动脚本注入 PATH，而沙箱常常起的是不加载
+这些脚本的裸 shell —— 那时 `python3` 会落到系统自带的那个。所以依赖要装在
+**跑脚本的那个 python** 里。不确定就先跑 `python3 scripts/doctor.py`，
+它报什么缺什么就是那个 python 的实情。
+
+
 `BBDown.data` 等价于你的 B 站登录态，`.env.local` 里是你的 API key。**两个都别提交进任何仓库。**
 
 ## 常见问题

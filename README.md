@@ -30,6 +30,15 @@
 
 每个 skill 都有 `scripts/doctor.py`，缺什么它会直接告诉你装什么命令。
 
+**Python 3.9+**（已在 3.9 和 3.12 上实测跑通全链路）。
+
+注意一个坑：**agent 沙箱里的 `python3` 可能跟你交互式终端里的不是同一个**。
+pyenv / conda 的 shims 靠 shell 启动脚本注入 PATH，而沙箱常常起的是不加载
+这些脚本的裸 shell —— 那时 `python3` 会落到系统自带的那个。所以依赖要装在
+**跑脚本的那个 python** 里。不确定就先跑 `python3 scripts/doctor.py`，
+它报什么缺什么就是那个 python 的实情。
+
+
 ## 为什么值得用它，而不是自己写一个
 
 这两个 skill 的价值不在代码量，在于代码里那些**只有踩过才知道的判断**：
