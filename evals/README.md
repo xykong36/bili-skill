@@ -1,6 +1,6 @@
 # evals
 
-四份场景，用来在改动 SKILL.md 或脚本之后确认 agent 的行为没退化。
+六份场景，用来在改动 SKILL.md 或脚本之后确认 agent 的行为没退化。
 
 ## 怎么跑
 
@@ -23,6 +23,8 @@
 | `02-routing-digest.json` | 「download 是 digest 的前置」这个误解；以及产物文件名是「阅读版」不是「可读版」 |
 | `03-empty-subtitles.json` | 空字幕列表三种含义，别直接说「这个视频没字幕」 |
 | `04-mp4-integrity.json` | 四个直觉判据里三个会放过截断的文件 |
+| `05-mindmap-handoff.json` | 没 API key 时的交接协议：不劝用户买 key、不手搓 opml、收尾用 `--build` 且带全 BV、别跑完第一段就说做完 |
+| `06-source-txt-resume.json` | 已有 `.source.txt` 时别重新生成一份把它盖掉（可能是人手工调过的） |
 
 ## 字段
 

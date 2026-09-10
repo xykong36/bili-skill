@@ -28,12 +28,12 @@
 SKILL.md 的 frontmatter 里有一条：
 
 ```yaml
-allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py *)
+allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py *), Read
 ```
 
 它让这个 skill 自己的命令免确认地跑。但这个授权**只在触发 skill 的那一轮有效，
 你下一条消息发出去就清空了**（见[官方文档](https://docs.claude.com/en/docs/claude-code/skills#pre-approve-tools-for-a-skill)）。
-嚼一期视频要抓字幕、调 LLM、出 PDF，通常跨好几轮对话，所以第二轮起会反复弹窗。
+嚼一期视频要抓字幕、写大纲、出 PDF，通常跨好几轮对话，所以第二轮起会反复弹窗。
 
 想按会话放行，把同一条规则写进 `~/.claude/settings.json`。
 注意 `${CLAUDE_SKILL_DIR}` **只在 SKILL.md 正文和 `allowed-tools` 里会被展开**，
@@ -71,7 +71,7 @@ ls -d ~/.claude/skills/digesting-bilibili-videos/scripts/bili.py
 | ffmpeg / ffprobe | 下载（完整性校验） | `brew install ffmpeg` |
 | `fpdf2` `fonttools` | 出 PDF 时 | `pip install fpdf2 fonttools` |
 | `pypdf` | 只在换字体后自检时 | `pip install pypdf` |
-| DeepSeek API key | 生成脑图时 | `echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local` |
+| 一个 OpenAI 兼容 API key | **可选**，生成脑图时 | 不配也能用——脑图那步会交给正在跑 skill 的 agent（Claude Code / Codex / 随便哪个）自己写。想无人值守：`echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local` |
 
 skill 自带 `scripts/bili.py doctor`，缺什么它会直接告诉你装什么命令。
 
@@ -111,8 +111,8 @@ pyenv / conda 的 shims 靠 shell 启动脚本注入 PATH，而沙箱常常起�
 
 ## 隐私
 
-- **`BBDown.data` 等价于你的 B 站登录态**，`.env.local` 里是你的 API key。两个都在 `.gitignore` 里，别提交、别分享。
-- 这两个 skill 只跟 B 站接口和你配的 LLM 通信，不上报任何东西。
+- **`BBDown.data` 等价于你的 B 站登录态**，`.env.local` 里是你的 API key（如果配了）。两个都在 `.gitignore` 里，别提交、别分享。`doctor` 不回显 key 的任何片段。
+- 这个 skill 只跟 B 站接口通信；脑图那步默认由**手边的 agent**完成，不额外联网。只有你自己配了 API key 时才会去连那个端点。
 
 ## 许可
 

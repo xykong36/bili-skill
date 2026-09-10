@@ -1,7 +1,7 @@
 ---
 name: digesting-bilibili-videos
 description: Downloads bilibili videos and turns their official AI subtitles into readable transcripts, OPML mindmaps, outlines and searchable Chinese PDFs. Use when downloading, saving or archiving a B站/BV号/哔哩哔哩 video locally, grabbing its cover image or metadata, getting a video's subtitles or transcript, turning an episode into a readable article, mindmap, outline or PDF, when a downloaded mp4 turns out corrupt, truncated, silent or fails with "moov atom not found", or when B站 subtitle requests come back empty or return the wrong video's text
-allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py *)
+allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py *), Read
 ---
 
 # B 站视频：存下来，或者嚼成能读的东西
@@ -84,16 +84,22 @@ B 站限流时接口**返回空结果，不报错**。所以「查不到这个�
 |---|---|---|
 | 1. 抓官方 AI 字幕 | `<stem>.srt` | 登录 cookie |
 | 2. 合并成自然段 | `<stem>-阅读版.md` | 纯标准库 |
-| 3. LLM 整理成脑图 | `<stem>.opml` + `.source.txt` | `DEEPSEEK_API_KEY` |
+| 3. 整理成脑图 | `<stem>.opml` + `.source.txt` | **你自己写**，或一个 API key |
 | 4. 渲染大纲 | `<stem>-大纲.md` | 纯本地，秒级 |
 | 5. 出两本 PDF | `<名>-mindmap.pdf` / `<名>-outline.pdf` | `fpdf2` `fonttools` |
 
 **步骤 4 和 5 都以第 3 步的 opml 为输入**，所以第 3 步跳过或失败时，大纲和 PDF 一并没有——这是正常的降级，不是漏做。1、2 两步不受影响，`--skip-mindmap` 仍然能拿到字幕和阅读版。
 
+**第 3 步不强制要 API key。** 配了就自动走 HTTP、无人值守；没配（默认）就交给**你**——
+脚本前置检查后直接告诉你这批活谁干，本轮出字幕和阅读版，大纲由你写，再用 `--build`
+收尾。退出码：`0` 全成 / `1` 有东西坏了 / `2` 什么都没坏、有几期在等你写大纲。
+详见下面「脑图那步」。
+
 | 想干的事 | 命令 |
 |---|---|
 | 几期打成一本 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1 BV2 BV3 --out ./out --name 合集名` |
-| 只要字幕和阅读版，不花钱 | `--skip-mindmap` |
+| 大纲写完了，收尾出脑图/大纲/PDF | 同一条 digest 命令加 `--build`（BV 一个都不能少） |
+| 只要字幕和阅读版 | `--skip-mindmap` |
 | 不要 PDF | `--skip-pdf` |
 | 已经有 srt 了（给了 `--srt` 就**忽略** BV 号，两者不叠加） | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest --srt a.srt --title 标题 --out ./out` |
 
@@ -130,11 +136,59 @@ B 站限流时接口**返回空结果，不报错**。所以「查不到这个�
 
 上限那道逮出过 6 期串号字幕，是唯一能自动发现「拿错字幕」的手段。下限不设 1.00 是因为片尾常有无语音段；也别调到 0.7，那会放过漏掉 30% 内容的字幕。
 
-## 脑图那步（LLM）
+## 脑图那步：没有 key 就是你自己写
 
-`reasoning_effort="none"` 是必须的，`--duration` 也必须传。踩坑细节见 **[references/llm-mindmap.md](references/llm-mindmap.md)**。
+这一步只需要一个能读长文本、会遵格式的模型。**你就是。** 所以 API key 是可选加速项，
+不是前置条件。**别看到没 key 就去劝用户办 DeepSeek 账号——默认路径本来就不用 key。**
 
-脑图节点的文本契约是 `<层级编号> [时间戳] 【类型】正文`，六种类型标签 `【观点】【数据】【案例】【金句】【做法】【交锋】` 是下游大纲排版和 PDF 配色的依据，**改 prompt 时别动它们**。
+脚本在动任何文件之前就把「这批活谁干」定下来并打印出来，第一行日志就是结论：
+
+| 环境 | 走哪条 | 谁干活 |
+|---|---|---|
+| 配了 `DEEPSEEK_API_KEY` / `BILI_LLM_API_KEY` | HTTP | 脚本自己，一条命令跑完 |
+| **什么都没配（默认）** | **交接** | **正在跑这个 skill 的你** |
+| `--mindmap-backend agent` | 交接 | 你（即使配了 key 也不用它） |
+| `--skip-mindmap` | 不做 | 没人，3/4/5 步一并没有 |
+
+`OPENAI_API_KEY` **不会**被自动采纳——它在很多机器上是常年导出的、跟本 skill 无关的
+变量，认它就会出现「用户想让你写大纲，却被一个八竿子打不着的模型静默接管」。
+要用它就显式 `--mindmap-backend api`。
+
+### 交接协议：三段，不是重跑
+
+看到 `⏸` 就按这个做。**别只看退出码**——`--with-video` 下退出码可能被下载那侧掩掉。
+
+```
+① python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1 BV2 --out ./out --name 合集名
+     出字幕和阅读版，然后打印一份带绝对路径的清单：每期读哪个、写到哪
+② 你自己干：读 assets/mindmap-outline-prompt.md，按它把每期的「阅读版」
+     整理成缩进式大纲，写进清单给的 <stem>.source.txt        （这步不跑脚本）
+③ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1 BV2 --out ./out --name 合集名 --build
+     读 .source.txt → 脑图 → 大纲 → 两本 PDF
+```
+
+③ 是 `--build`，**不是把 ① 再跑一遍**。清单里会把这条命令原样打出来，照抄即可。
+
+**③ 必须带上原来全部的 BV，不能只跑缺的那几期。** 两本 PDF 的文件名只由 `--name`
+决定、内容只有这一次给的 BV，少给几个就会把完整的那本悄悄盖掉（见「产物」那节）。
+正因如此，有待写的期数时 ① **不出 PDF**，等你补完一次性出全的。
+
+写大纲时：**只写大纲本身**，不要代码围栏、不要前言、不要「好的，我来整理」。
+缩进用 **2 个空格，不能用 tab**（tab 会被解析成零缩进，整棵树压成一层）。
+写完的 `.source.txt` 会过一道体检（行数、tab、缩进、时间戳密度），不合格会告诉你
+原因并退回让你重写。
+
+**别自己手写 `.opml` XML**：层级编号、按时间排序、补漏写的小时位、单调性校验都在
+脚本里，手写等于把这些全丢了。
+
+**跑完 ① 不等于做完了。** 那时候还没有脑图、大纲和 PDF。
+
+### 两条不能改的硬约定
+
+`reasoning_effort="none"` 是必须的（只对 DeepSeek 端点），`--duration` 也必须传。
+踩坑细节见 **[references/llm-mindmap.md](references/llm-mindmap.md)**。
+
+脑图节点的文本契约是 `<层级编号> [时间戳] 【类型】正文`，六种类型标签 `【观点】【数据】【案例】【金句】【做法】【交锋】` 是下游大纲排版和 PDF 配色的依据，**你写大纲时照用，改 prompt 时别动它们**。
 
 ## PDF：中文必须可搜索
 
@@ -178,11 +232,11 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py login       # --force 换账号 / �
 | `BBDown.data` 登录态 | 两条都要（下载没它只能拿低清流；字幕没它只返回空列表） | `pip install segno` 后跑 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py login` 扫码 |
 | BBDown | 下载 | https://github.com/nilaoda/BBDown/releases 放进 PATH |
 | ffmpeg / ffprobe | 下载（完整性校验） | `brew install ffmpeg` |
-| `DEEPSEEK_API_KEY` | 嚼第 3 步 | `echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local`（`--skip-mindmap` 可绕过） |
+| 一个 OpenAI 兼容 API key | 嚼第 3 步，**可选** | 不配就由当前 agent 自己写（默认）。想无人值守：`echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local` |
 | `fpdf2` `fonttools` | 嚼第 5 步 | `pip install fpdf2 fonttools`（`--skip-pdf` 可绕过） |
 | `pypdf` | **只在换字体后自检时** | `pip install pypdf`，见 references/pdf-fonts.md |
 
-下载、抓字幕、阅读版这几步都是**纯标准库**的。
+下载、抓字幕、阅读版，以及交接模式下的整条嚼链路，都是**纯标准库**的——不配 key 也不装额外依赖就能跑到大纲。
 
 **Python 3.9+**（已在 3.9 和 3.12 上实测跑通全链路）。注意：**agent 沙箱里的 `python3` 可能跟你交互式终端里的不是同一个**（pyenv/conda 的 shims 靠 shell 启动脚本注入 PATH，沙箱常起裸 shell）。依赖要装在**跑脚本的那个 python** 里；不确定就先跑 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor`，它报什么缺什么就是那个 python 的实情。
 
@@ -207,7 +261,7 @@ out/
 ├── 20260323-标题-BV1xxx.srt         嚼 1：官方 AI 字幕
 ├── 20260323-标题-BV1xxx-阅读版.md    嚼 2：合并成自然段
 ├── 20260323-标题-BV1xxx.opml        嚼 3：脑图
-├── 20260323-标题-BV1xxx.source.txt  嚼 3：喂给 LLM 的原文
+├── 20260323-标题-BV1xxx.source.txt  嚼 3：大纲原文。API 出的或你写的，都在这
 ├── 20260323-标题-BV1xxx-大纲.md      嚼 4
 ├── <--name>-mindmap.pdf            嚼 5：整本，一批共一本
 └── <--name>-outline.pdf            嚼 5：整本，一批共一本
@@ -217,6 +271,9 @@ out/
 
 `--name` 只被第 5 步的两本 PDF 用（默认 `B站合集`）。加了 `--skip-pdf`
 或 `--skip-mindmap` 时它没有任何作用，可以不给。
+
+想让第 3 步重来（换个模型、或者大纲写砸了），**删掉 `.source.txt` 再跑**——
+它在就会被复用，不会再问你要第二次大纲。
 
 **但 PDF 这层不幂等，会覆盖。** srt / 阅读版 / opml / 大纲的文件名都带 BV，
 重跑安全；两本 PDF 的文件名只由 `--name` 决定，内容是**这一次**给的那批 BV。
@@ -236,8 +293,13 @@ out/
 | 字幕列表为空 | 见「三种含义」，先跑 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor` |
 | 字幕内容跟视频完全不相干 | 走到老接口了。只能用 `wbi/v2` |
 | 报「判定串号，已丢弃」 | 上限校验生效，字幕不是这个视频的 |
-| 没设 `DEEPSEEK_API_KEY` 又没加 `--skip-mindmap` | **开跑前就退出**并告诉你两个选项，不会跑到一半才炸、也不会静默降级 |
-| 脑图那步 402 Insufficient Balance | DeepSeek 账户没余额了。加 `--skip-mindmap` 仍可得 srt + 阅读版 |
+| 没配 API key 又没加 `--skip-mindmap` | **不是错误**。前置检查后走交接：本轮出字幕和阅读版，大纲你写，再 `--build` 收尾 |
+| 退出码 2 | 什么都没坏，有几期的大纲在等你写。`0`=全成，`1`=有东西坏了 |
+| 有待写的期数时没出 PDF | 故意的。PDF 是整本覆盖的，出半本会被 `--build` 那次盖掉 |
+| `--build` 说 `.source.txt` 不合格 | 体检没过。看日志给的原因：多半是 tab 缩进、被截断、或没有 `[mm:ss]` |
+| 大纲和 PDF 全是朴素排版、没有配色 | 写大纲时漏了 `【类型】` 标签。六个标签是配色的依据 |
+| 脑图那步 402 Insufficient Balance | DeepSeek 账户没余额了。删掉 key（或 `--mindmap-backend agent`）就退回你自己写 |
+| 脑图那步连不上（API） | socks5 代理没剥掉。urllib 不支持 socks5，脚本会剥掉 `*_proxy` 里的 socks 项 |
 | 脑图正文为空 | `reasoning_effort` 没关，token 被思考吃光 |
 | PDF 里中文搜不到 | 字体把字映射到康熙部首区了，换回 Noto Sans SC |
 | PDF 生成抛 TypeError | 标题里有 emoji 且没走 `pdftext.safe()` |

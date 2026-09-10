@@ -129,13 +129,32 @@ def run(canary=None):
                  "先 `bili.py login --force`；还不行就等一会儿再试")
             blocked |= DIGEST
 
-    key = os.environ.get("DEEPSEEK_API_KEY")
-    if key:
-        ok_("DEEPSEEK_API_KEY", f"已设置（{key[:6]}…）")
+    # 没配 key 必须报 ✓ 而不是 !。「!」的语义是「缺了少功能」，可这里没 key 是一个
+    # 完整可用的配置 —— 大纲由跑这个 skill 的 agent 自己写。报成 ! 会让 agent 继续
+    # 去劝用户买 key，正好跟这个 skill 要的「自适应到当前 agent」相反。
+    #
+    # 另外这里**不回显 key 的任何片段**。以前打的是 key[:6]，那会把真 key 的前缀
+    # 写进 agent 的上下文和终端回滚，白白多一个泄漏面。报出处的变量名就够定位了。
+    kind, info = skill_config.resolve_mindmap()
+    if kind == "api":
+        ok_("脑图后端", f"API {info['model']} @ {info['base']}"
+                        f"（来自 {info['via']}，无人值守）")
+    elif kind == "claude":
+        ok_("脑图后端", "claude CLI 子进程（显式指定）")
+    elif kind == "error":
+        hard("脑图后端", info, "去掉 BILI_MINDMAP_BACKEND 就退回默认（交给当前 agent）")
+        blocked |= DIGEST
     else:
-        soft("DEEPSEEK_API_KEY", "未设置（脑图那步要用）",
-             "echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local"
-             "，或加 --skip-mindmap 只要字幕和阅读版")
+        ok_("脑图后端", "交给当前 agent —— 第 3 步由你自己写大纲（默认方式，不是缺陷）。"
+                        "想无人值守就配个 key："
+                        "echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local")
+
+    if skill_config.PROMPT_PATH.is_file():
+        ok_("脑图 prompt", str(skill_config.PROMPT_PATH))
+    else:
+        hard("脑图 prompt", f"缺失：{skill_config.PROMPT_PATH}",
+             "这个文件随 skill 一起装，缺了说明装歪了 —— 重装这个 skill")
+        blocked |= DIGEST
 
     for mod, why, fix in [("fpdf", "出 PDF 用", "pip install fpdf2"),
                           ("fontTools", "字体实例化用", "pip install fonttools")]:

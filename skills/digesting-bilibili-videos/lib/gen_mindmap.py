@@ -8,27 +8,31 @@ gen_mindmap.py —— 字幕文件 → OPML 思维导图(一个脚本跑完全�
         字幕文件: 带时间戳的 .srt / .md / .txt
         输出前缀: 默认 = 视频标题(同目录 .mp4 名, 否则文件夹名去 'BV..._' 前缀)
     可选:
-        --backend deepseek|claude   AI 后端(默认 deepseek)
-        --model M                   指定模型
-                                    claude 例: sonnet / haiku / opus
-                                    deepseek 例: deepseek-v4-flash(默认) / deepseek-chat / deepseek-reasoner
+        --backend auto|api|agent|claude
+                                    auto(默认): 配了 key 就走 api, 没配就交给当前 agent
+                                    api:    OpenAI 兼容端点(DeepSeek 是其中一个)
+                                    agent:  不自己调模型, 让跑这个 skill 的 agent 写大纲
+                                    claude: 起一个 claude CLI 子进程(显式 opt-in)
+        --model M                   指定模型(claude 例: sonnet/haiku/opus)
         --outline                   把输入当作"已整理好的缩进大纲", 跳过 AI 这步
+        --print-prompt              打印喂给模型的 prompt 后退出
         --duration N                视频时长(秒)。给了才会修复漏写小时位的时间戳
                                     (没有它无法判断补出来的时间是否超出视频)
 
-    DeepSeek 鉴权(二选一):
+    API 鉴权(可选! 不配就走 agent 那条路):
         A) 在 .env.local 写:  DEEPSEEK_API_KEY=sk-...   (脚本自动从当前目录逐级向上查找)
         B) 环境变量:          export DEEPSEEK_API_KEY=sk-...
-        (可选) DEEPSEEK_BASE_URL=https://api.deepseek.com
+        (可选) DEEPSEEK_BASE_URL / BILI_LLM_API_KEY+BILI_LLM_BASE_URL+BILI_MINDMAP_MODEL
 
 流程:
-    ① (AI 整理) claude CLI 或 DeepSeek API 读字幕 → 缩进式大纲文本
+    ① (AI 整理) 当前 agent / OpenAI 兼容 API / claude CLI 读字幕 → 缩进式大纲文本
     ② (解析)    缩进 → 树, 抽取 [mm:ss] 时间戳
     ③ (排序)    每个父节点下子节点按时间戳从早到晚
     ④ (编号)    层级序号 1 / 1.1 / 1.1.1
     ⑤ (输出)    <前缀>.opml   (顺带保存 <前缀>.source.txt 便于手动微调后重跑)
 
-依赖: python3(仅标准库);  claude 后端需已登录的 claude CLI;  deepseek 后端需 DEEPSEEK_API_KEY
+依赖: python3(仅标准库);  claude 后端需已登录的 claude CLI;  api 后端需一个 API key
+      (agent 后端什么都不需要 —— 大纲由跑这个 skill 的 agent 自己写)
 """
 import sys, os, re, subprocess, json, urllib.request, urllib.error
 from pathlib import Path
@@ -42,43 +46,18 @@ from lib import skill_config
 INDENT = 2  # 大纲每级缩进空格数
 NEAR_PARENT_SEC = 600  # 补小时位后允许离父节点多远(秒)，见 repair_timestamps
 
-PROMPT = """你是一个视频内容结构化助手。下面(在本条消息之后)是一段带时间戳的视频字幕。
-请把它整理成一份**尽量详细**的"缩进式思维导图大纲",严格满足以下要求,且**只输出大纲本身,不要任何解释、前言、代码围栏**:
+def load_prompt():
+    """从 assets 读 prompt。
 
-【格式】
-1. 第一行是根标题(视频主题,可含嘉宾/时长),顶格,无时间戳。
-2. 每级用【2个空格】缩进(章节2格、论点4格、论据6格、更细8格,以此类推)。
-3. 每个有明确时间点的节点,行首写 [mm:ss](超过1小时用 [h:mm:ss]),后跟一个空格,再写标题。
-4. 时间戳对应该内容在字幕里"真正展开论述"的位置(不要用开头预告集锦的时间);保证父节点时间戳 ≤ 其所有子节点。
+    故意放在函数里而不是模块顶层：顶层读文件会让任何 import 这个模块的地方都可能炸,
+    而 digest.py 走 agent 那条路时根本不需要 prompt。
+    """
+    try:
+        return skill_config.PROMPT_PATH.read_text(encoding="utf-8").strip() + "\n"
+    except OSError as e:
+        sys.exit(f"读不到脑图 prompt: {skill_config.PROMPT_PATH}({e})。\n"
+                 "这个文件随 skill 一起装, 缺了说明装歪了 —— 重装这个 skill。")
 
-【结构:论点 + 论据,宁细勿粗】
-5. 按视频时间线组织:章节(第一层)从头到尾顺序排列;每章内也按时间递增。章节数 6~12 个。
-6. 每章下要**充分展开**,层级建议 3~4 层:章节 > 论点 > 论据(必要时论据下再补细节)。
-7. 把讲者提出的每个**论点/主张/结论**各作为一个节点;并在其**下一层**列出支撑它的**论据**——例子、数据、类比、原因、故事、反例、引用、步骤等,做到"论点有据"。
-8. 论据要具体:有数字写数字,有例子写例子名,有类比写类比对象(如"荷塘理论""岗位如白领暴增")。不要只写空泛的概括。
-9. 节点数量不设上限,一集十几分钟的视频通常应有 40~80+ 个节点;但每个节点仍是精炼短句(≤35字),不要照抄整句字幕。
-
-【类型标签】
-10. **章节(第一层)不打标签**,直接写章节标题。**第二层及以下的每个节点**(论点/论据),在 [时间戳] 之后、正文之前,加一个 `【类型】` 标签,类型只能从下面这六个里选,按这个节点**实际是什么**来选(不要写成旧式的"论点:""论据:"):
-    【观点】讲者提出的主张、判断、结论
-    【数据】具体数字、比例、时长、规模、研究结果
-    【案例】故事、亲身经历、公司或产品的具体例子
-    【金句】值得直接引用的原话(正文写这句话本身)
-    【做法】可操作的步骤、建议、方法
-    【交锋】提问与回应、分歧、被追问之后的让步或修正
-11. 标签跟着内容走:一个论点通常是【观点】,它下面的论据按各自实质选【数据】/【案例】/【金句】/【做法】/【交锋】;不要为了凑齐六种硬套,也不要每条都写成一样的类型。拿不准或确实不属于任何一类时,可以不打标签(退回朴素正文),但优先尽量打上。
-
-示例(仅示意结构,注意章节不打标签、论点/论据各按实质打标签):
-某视频标题（嘉宾 · 时长）
-  [00:20] 第一章:如何提前判断赢家
-    [00:20] 【观点】要投未来的成功者而非现在的
-      [00:34] 【观点】今天的成功者早被投过,回报有限
-      [02:28] 【案例】荷塘理论——第27天水面才1/8,却离铺满仅3天
-    [03:10] 【观点】自己也会误判,需持续纠偏
-      [03:41] 【案例】曾押错激光雷达,被特斯拉纯视觉+大模型翻盘
-      [04:05] 【数据】纯视觉路线成本降到激光雷达的 1/10
-  [05:03] 第二章:...
-"""
 
 # ---------- ① AI: 字幕 -> 大纲 (多后端) ----------
 def _clean(out):
@@ -88,8 +67,8 @@ def _clean(out):
         sys.exit("模型返回空内容,请检查鉴权或重试。")
     return out.rstrip() + "\n"
 
-def _outline_claude(subtitle_text, model=None):
-    cmd = ["claude", "-p", PROMPT]
+def _outline_claude(subtitle_text, prompt, model=None):
+    cmd = ["claude", "-p", prompt]
     if model:
         cmd += ["--model", model]
     print("① 用 claude CLI 把字幕整理成大纲 ...", file=sys.stderr)
@@ -98,33 +77,38 @@ def _outline_claude(subtitle_text, model=None):
         sys.exit(f"claude 调用失败(returncode={r.returncode}):\n{r.stderr.strip()}")
     return _clean(r.stdout)
 
-def _outline_deepseek(subtitle_text, model=None):
-    api_key = os.environ.get("DEEPSEEK_API_KEY")
-    if not api_key:
-        sys.exit("未设置环境变量 DEEPSEEK_API_KEY(export DEEPSEEK_API_KEY=sk-...)")
-    base = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com").rstrip("/")
+def _outline_api(subtitle_text, prompt, ep):
+    """OpenAI 兼容的 /chat/completions。DeepSeek 只是其中一个端点。"""
     payload = {
-        "model": model or "deepseek-v4-flash",
+        "model": ep["model"],
         "messages": [
-            {"role": "system", "content": PROMPT},
+            {"role": "system", "content": prompt},
             {"role": "user", "content": subtitle_text},
         ],
         "temperature": 0.3,
-        # v4-flash 默认开思考(reasoning), 且 reasoning tokens 计入 max_tokens——整篇字幕下
-        # 思考很容易把一个偏小的 max_tokens 吃光, 正文一个字都没出(finish_reason=length)。
-        # 这个整理任务不需要思考(旧的 deepseek-chat 本就是非思考), 关掉更快更省, 预算全给正文。
-        # 关思考: reasoning_effort=none。想要思考版就删掉这行并把 max_tokens 留足。
-        "reasoning_effort": "none",
         # 模型上限 1M 上下文 / 384K 输出, 这里给足以容纳最长一期的详细大纲; 按实际生成量计费,
         # 高上限只是天花板不会白花钱。典型一期正文 3~8k tokens, 长播客也远不到这个数。
         "max_tokens": 65536,
         "stream": False,
     }
+    # v4-flash 默认开思考(reasoning), 且 reasoning tokens 计入 max_tokens——整篇字幕下
+    # 思考很容易把一个偏小的 max_tokens 吃光, 正文一个字都没出(finish_reason=length)。
+    # 这个整理任务不需要思考(旧的 deepseek-chat 本就是非思考), 关掉更快更省, 预算全给正文。
+    # 关思考: reasoning_effort=none。想要思考版就删掉这行并把 max_tokens 留足。
+    #
+    # **只对 DeepSeek 端点带。** 这是个非标字段, 别家(含 OpenAI 官方)见到未知字段会
+    # 直接 400, 泛化成任意 OpenAI 兼容端点之后必须按端点区分。
+    if "deepseek" in ep["base"].lower() or ep["via"] == "DEEPSEEK_API_KEY":
+        payload["reasoning_effort"] = "none"
+
     req = urllib.request.Request(
-        base + "/chat/completions", data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+        ep["base"] + "/chat/completions", data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json",
+                 "Authorization": f"Bearer {ep['key']}"},
     )
-    print(f"① 用 DeepSeek API({payload['model']}, 非思考) 把字幕整理成大纲 ...", file=sys.stderr)
+    thinking = "非思考" if "reasoning_effort" in payload else "默认思考设置"
+    print(f"① 用 API({ep['model']} @ {ep['base']}, {thinking}) 把字幕整理成大纲 ...",
+          file=sys.stderr)
     last = None
     for attempt in range(3):
         try:
@@ -133,15 +117,36 @@ def _outline_deepseek(subtitle_text, model=None):
             return _clean(data["choices"][0]["message"].get("content") or "")
         except urllib.error.HTTPError as e:
             # 4xx(鉴权/参数)重试也没用, 直接报错
-            sys.exit(f"DeepSeek API 失败 {e.code}: {e.read().decode('utf-8', 'ignore')[:500]}")
+            sys.exit(f"API 失败 {e.code}: {e.read().decode('utf-8', 'ignore')[:500]}")
         except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as e:
             last = e
-    sys.exit(f"DeepSeek API 网络错误(重试 3 次仍失败): {last}")
+    sys.exit(f"API 网络错误(重试 3 次仍失败): {last}\n"
+             "  有 socks5 代理的话 urllib 不认它 —— 见 references/llm-mindmap.md")
 
-def subtitle_to_outline(subtitle_text, backend="claude", model=None):
-    if backend == "deepseek":
-        return _outline_deepseek(subtitle_text, model)
-    return _outline_claude(subtitle_text, model)
+def _handoff_to_agent(prefix):
+    """agent 后端：这个进程写不出大纲，把该做什么说清楚然后退出。
+
+    digest.py 不走这里 —— 它自己先 resolve_mindmap()，agent 模式下根本不拉起这个
+    子进程。这条只服务「单独跑 gen_mindmap.py」的人。
+    """
+    print(f"⏸ 脑图这步没有配 API key，要由跑这个 skill 的 agent 来写大纲。\n"
+          f"  1) 读 prompt: {skill_config.PROMPT_PATH}\n"
+          f"  2) 按它把字幕整理成缩进式大纲，写到: {prefix}.source.txt\n"
+          f"  3) 再跑一次，这次加 --outline 并把输入换成那个 .source.txt\n"
+          f"  (想无人值守就配个 key: echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local)",
+          file=sys.stderr)
+    sys.exit(3)
+
+def subtitle_to_outline(subtitle_text, backend="auto", model=None, prefix="out"):
+    kind, info = skill_config.resolve_mindmap(backend)
+    if kind == "error":
+        sys.exit(info)
+    if kind == "agent":
+        _handoff_to_agent(prefix)
+    prompt = load_prompt()
+    if kind == "claude":
+        return _outline_claude(subtitle_text, prompt, model)
+    return _outline_api(subtitle_text, prompt, info)
 
 # ---------- ② 解析缩进大纲 -> 树 ----------
 def parse(text):
@@ -273,11 +278,14 @@ def main():
     # .env.local 放在它旁边，统一实现时不能把这个位置弄丢。
     skill_config.load_dotenv(os.path.dirname(os.path.abspath(__file__)))
     argv = sys.argv[1:]
-    positional, model, backend, use_outline, duration = [], None, "deepseek", False, None
+    positional, model, backend, use_outline, duration = [], None, "auto", False, None
     i = 0
     while i < len(argv):
         a = argv[i]
-        if a == "--outline":
+        if a == "--print-prompt":
+            print(load_prompt(), end="")
+            return
+        elif a == "--outline":
             use_outline = True
         elif a == "--model":
             i += 1; model = argv[i] if i < len(argv) else None
@@ -299,8 +307,6 @@ def main():
 
     if not positional:
         sys.exit(__doc__)
-    if backend not in ("claude", "deepseek"):
-        sys.exit(f"未知后端: {backend}(可选: claude / deepseek)")
     infile = positional[0]
     prefix = positional[1] if len(positional) > 1 else derive_title(infile)
 
@@ -309,11 +315,15 @@ def main():
     raw = open(infile, encoding="utf-8").read()
 
     # ① 字幕 -> 大纲 (--outline 则直接把输入当大纲)
+    src = f"{prefix}.source.txt"
     if use_outline:
         outline = raw
+        # 输入本身就是那份 source.txt 时这是 no-op(别自我覆盖)；不是的话回写一份，
+        # 让「API 出的」和「agent 写的」两条路产物形状一致。
+        if os.path.abspath(infile) != os.path.abspath(src):
+            open(src, "w", encoding="utf-8").write(outline)
     else:
-        outline = subtitle_to_outline(raw, backend, model)
-        src = f"{prefix}.source.txt"
+        outline = subtitle_to_outline(raw, backend, model, prefix)
         open(src, "w", encoding="utf-8").write(outline)
         print(f"  已保存大纲: {src}(可手动微调后加 --outline 重跑)", file=sys.stderr)
 
