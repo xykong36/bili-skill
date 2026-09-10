@@ -14,6 +14,7 @@ import json
 import os
 import shutil
 import subprocess
+import tempfile
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -38,6 +39,38 @@ def _curl_json(url, cookie=None, referer=None, retry=RETRY):
         except json.JSONDecodeError:
             time.sleep(1 + attempt)      # 限流/抖动，退避重试
     return None
+
+
+def get_json_with_cookies(url, referer=None, timeout=30):
+    """GET 一个 JSON 接口，同时把响应里的 Set-Cookie 也带回来。
+
+    返回 (body_dict_or_None, {cookie名: 值})。扫码登录要用它 —— B 站现在把
+    登录 cookie 放在响应头里下发，光看 body 是拿不到的。
+    """
+    with tempfile.TemporaryDirectory(prefix="bili-hdr-") as td:
+        hdr = Path(td) / "h.txt"
+        cmd = ["curl", "-s", "--max-time", str(timeout), "-A", UA, "-D", str(hdr)]
+        if referer:
+            cmd += ["-H", f"Referer: {referer}"]
+        out = subprocess.run(cmd + [url], capture_output=True, text=True).stdout
+        try:
+            body = json.loads(out)
+        except json.JSONDecodeError:
+            body = None
+        jar = {}
+        try:
+            for line in hdr.read_text(encoding="utf-8", errors="ignore").splitlines():
+                if not line.lower().startswith("set-cookie:"):
+                    continue
+                # Set-Cookie: NAME=VALUE; Path=/; Domain=...  —— 只要第一段
+                first = line.split(":", 1)[1].strip().split(";", 1)[0]
+                if "=" in first:
+                    k, v = first.split("=", 1)
+                    if v.strip():
+                        jar[k.strip()] = v.strip()
+        except OSError:
+            pass
+    return body, jar
 
 
 def get_json(url, cookie=None, referer=None, retry=RETRY):

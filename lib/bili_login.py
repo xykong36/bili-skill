@@ -51,24 +51,46 @@ def generate():
 
 
 def poll(qrcode_key):
-    """轮询一次。返回 (data.code, data.url)。网络抖动时返回 (None, "")。"""
-    body = bili_api.get_json(POLL + qrcode_key, retry=1)
-    if not body:
-        return None, ""
-    data = body.get("data") or {}
-    return data.get("code"), data.get("url") or ""
+    """轮询一次。返回 (data.code, data.url, set_cookie 字典)。
 
-
-def url_to_cookie(url):
-    """把登录成功返回的跨域 URL 转成 BBDown.data 的内容。
-
-    BBDown 的规则（照抄才能字节级兼容）：取 `?` 之后的整段 query string，
-    把 `&` 换成 `;`，把英文逗号换成 %2C。所以 gourl / first_domain / Expires
-    这些「不像 cookie」的字段也会一起写进去 —— 它们是那个 URL 的伴生参数，
-    BBDown 原样保留，我们也保留。
+    登录 cookie 有两种下发方式，**两种都得接**：
+      · 响应头 Set-Cookie（B 站现在走这条，account.bilibili.com 新端点）
+      · body 里 data.url 的 query string（BBDown 当年写的那条，老端点）
+    只认一种就会在对方改版时静默失败 —— 实际就踩过：扫码明明成功了，
+    data.url 里却没有 SESSDATA。
     """
-    q = urlsplit(url).query
-    return q.replace("&", ";").replace(",", "%2C")
+    body, jar = bili_api.get_json_with_cookies(POLL + qrcode_key)
+    if not body:
+        return None, "", {}
+    data = body.get("data") or {}
+    return data.get("code"), data.get("url") or "", jar
+
+
+# BBDown.data 里的字段顺序（照它写的顺序来，纯粹为了 diff 时好看）。
+# 前四个是真 cookie，Expires/gourl/first_domain 是老端点 URL 的伴生参数，
+# 新端点没有它们 —— 缺了也完全不影响使用。
+COOKIE_ORDER = ("DedeUserID", "DedeUserID__ckMd5", "Expires", "SESSDATA",
+                "bili_jct", "gourl", "first_domain")
+REQUIRED = "SESSDATA"
+
+
+def build_cookie(url, jar):
+    """把两个来源合并成 BBDown.data 的内容。返回 (内容, 用到的字段名列表)。
+
+    Set-Cookie 优先（那是权威的 cookie），data.url 的 query 兜底。
+    """
+    from urllib.parse import parse_qsl
+    merged = {}
+    for k, v in parse_qsl(urlsplit(url).query):        # 兜底来源
+        if v:
+            merged[k] = v
+    merged.update({k: v for k, v in (jar or {}).items() if v})   # 权威来源覆盖
+
+    ordered = [k for k in COOKIE_ORDER if k in merged]
+    ordered += [k for k in merged if k not in COOKIE_ORDER]
+    # 值里的英文逗号要转义，否则 BBDown 解析 cookie 串时会断错
+    parts = [f"{k}={merged[k].replace(',', '%2C')}" for k in ordered]
+    return ";".join(parts), ordered
 
 
 # ---------- 二维码 ----------
@@ -162,6 +184,8 @@ def main(argv=None):
                     help="给 B 站请求挂代理，如 socks5://127.0.0.1:1080")
     ap.add_argument("--force", action="store_true",
                     help="已经登录了也重新登录")
+    ap.add_argument("--debug", action="store_true",
+                    help="失败时多打一点诊断（**只打字段名，绝不打值**）")
     args = ap.parse_args(argv)
 
     if args.proxy:
@@ -198,7 +222,7 @@ def main(argv=None):
     try:
         while time.time() < deadline:
             time.sleep(POLL_INTERVAL)
-            code, ok_url = poll(key)
+            code, ok_url, jar = poll(key)
             if code is None:
                 continue                      # 网络抖一下，接着轮询
             if code == SCAN_WAITING:
@@ -213,14 +237,25 @@ def main(argv=None):
                 cleanup()
                 return 1
             if code == SCAN_OK:
-                content = url_to_cookie(ok_url)
-                if "SESSDATA=" not in content:
-                    log("✗ 登录返回里没有 SESSDATA，没法用。请重试。")
+                content, names = build_cookie(ok_url, jar)
+                if REQUIRED not in names:
+                    log("✗ 扫码成功了，但两个来源里都没找到 SESSDATA，写不了登录态。")
+                    log("  这通常意味着 B 站又改了返回格式。带 --debug 再跑一次，"
+                        "它只打字段名、不打任何值，把输出发给维护者即可。")
+                    if args.debug:
+                        from urllib.parse import parse_qsl
+                        log(f"  [debug] Set-Cookie 字段名: "
+                            f"{sorted(jar) or '（空）'}")
+                        log(f"  [debug] data.url query 字段名: "
+                            f"{sorted(k for k, _ in parse_qsl(urlsplit(ok_url).query)) or '（空）'}")
+                        log(f"  [debug] data.url 的 host: "
+                            f"{urlsplit(ok_url).netloc or '（空）'}")
                     cleanup()
                     return 1
                 target = write_cookie(content, bili_api.cookie_target())
                 cleanup()
                 log(f"✓ 登录成功，登录态已写入 {target}")
+                log(f"  写入字段：{', '.join(names)}")
                 log("  这个文件等价于你的 B 站账号登录态，别提交进仓库、别分享。")
                 log("  验证：跑一下同目录的 doctor.py")
                 return 0
