@@ -1,0 +1,17 @@
+{
+  "skills": ["digesting-bilibili-videos"],
+  "query": "把 BV1zsXbBVE5d 和 BV17QedzREno 这两期整理成脑图和大纲。我没有 DeepSeek 的 API key。",
+  "expected_behavior": [
+    "不把「没有 API key」当成阻塞，也不建议用户去注册 DeepSeek —— 没配 key 是默认路径，不是缺陷",
+    "照常跑 digest，知道脑图那步会交给自己写",
+    "读 assets/mindmap-outline-prompt.md，按它把「阅读版」整理成缩进式大纲",
+    "大纲用 2 个空格缩进，不用 tab；只写大纲本身，不带代码围栏或前言",
+    "每个节点带上【观点】【数据】【案例】【金句】【做法】【交锋】六种之一",
+    "写进脚本给的 <stem>.source.txt 路径，两期都写",
+    "收尾用 --build，不是把第一条命令原样再跑一遍",
+    "--build 时带上原来全部两个 BV，不只跑缺的那期",
+    "不自己手写 .opml XML，也不手写大纲 md —— 编号/排序/时间戳修复/单调性校验都在脚本里",
+    "跑完第一条命令（退出码 2）不报告「已完成」—— 那时还没有脑图、大纲和 PDF"
+  ],
+  "why": "0.5.0 起 API key 变成可选，脑图那步默认交给驱动 skill 的 agent。这条防四种退化：(a) 看到没 key 就停下来劝用户买 key；(b) 跳过交接、直接手搓 opml；(c) 收尾时只带待写的那几个 BV，把整本 PDF 盖成半本；(d) 只跑了第一段就宣称做完。"
+}

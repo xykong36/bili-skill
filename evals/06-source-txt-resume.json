@@ -1,0 +1,12 @@
+{
+  "skills": ["digesting-bilibili-videos"],
+  "query": "out/ 里已经有 20250825-赚钱信息差-BV17QedzREno.source.txt 了，但没有 .opml。帮我把这期跑完。",
+  "expected_behavior": [
+    "认出 .source.txt 就是脑图那步的断点，直接用 --build 收尾",
+    "不重新生成一份大纲去覆盖已有的那份 —— 它可能是用户手工微调过的",
+    "不去调 API，也不重写 .source.txt",
+    "知道字幕和阅读版会被幂等跳过，这轮只出 opml、大纲和 PDF",
+    "如果脚本报 .source.txt 不合格（tab 缩进 / 被截断 / 没有 [mm:ss]），按报出来的原因重写它，而不是删掉了事或改去配 key"
+  ],
+  "why": ".source.txt + --build 是整个交接协议的恢复口。最贵的退化是 agent 看见「没有 opml」就从头再生成一遍大纲，把已有的那份盖掉 —— 那份可能是人手工调过的，覆盖了不可逆。"
+}

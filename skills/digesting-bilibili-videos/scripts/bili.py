@@ -7,6 +7,13 @@
     bili.py download BV1xxx [BV2 ...] --out DIR
     bili.py digest   BV1xxx [BV2 ...] --out DIR [--name 书名] [--with-video]
     bili.py digest   --srt path/to.srt --title 标题 --out DIR
+    bili.py digest   BV1xxx [...] --out DIR --build     收尾（见下）
+
+脑图那步不强制要 API key：配了就无人值守跑；没配就由**跑这个 skill 的 agent**
+按 assets/mindmap-outline-prompt.md 把阅读版写成 <stem>.source.txt，再用
+--build 收尾出脑图/大纲/PDF。退出码 2 就是「没坏，有几期大纲在等你写」。
+
+digest 退出码：0 全成 / 1 有东西坏了 / 2 有几期在等 agent 写大纲
 
 两条工作流**并列，不是流水线**：字幕直接走接口拿、全程不碰 mp4，
 所以想要文字不必先下视频。--with-video 只是把两条各跑一遍。
@@ -54,7 +61,8 @@ def cmd_digest(args):
             log_sep("视频这条没全成，字幕流程照常继续")
 
     rc_text = digest.run(args.targets, out, args.name, args.skip_mindmap,
-                         args.skip_pdf, args.srt, args.title, args.duration)
+                         args.skip_pdf, args.srt, args.title, args.duration,
+                         args.mindmap_backend, args.build)
     return rc_text or rc_video
 
 
@@ -107,7 +115,13 @@ def build_parser():
     g.add_argument("--skip-pdf", action="store_true",
                    help="不出 PDF（省掉 fpdf2 依赖）")
     g.add_argument("--skip-mindmap", action="store_true",
-                   help="只要字幕和阅读版，不调 LLM（不需要 DEEPSEEK_API_KEY）")
+                   help="只要字幕和阅读版，不做脑图那步（既不调 API，也不找 agent 要大纲）")
+    g.add_argument("--build", action="store_true",
+                   help="收尾：把每期已写好的 .source.txt 当大纲，出脑图/大纲/PDF")
+    g.add_argument("--mindmap-backend", choices=["auto", "api", "agent", "claude"],
+                   default=None,
+                   help="auto（默认）配了 key 走 API、没配交给当前 agent；"
+                        "agent 即使配了 key 也交给 agent")
     g.add_argument("--with-video", action="store_true",
                    help="顺便把正片也下下来（等于两条工作流各跑一遍）")
     g.add_argument("--max-mb", type=int, default=download.DEFAULT_MAX_MB,
