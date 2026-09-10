@@ -36,11 +36,39 @@ python3 scripts/download.py BV1xxx --out ./out
 
 重跑是幂等的：已存在且校验通过的产物会跳过，坏的会被删掉重下。
 
+## 登录
+
+抓官方字幕、拿高清晰度流都要 B 站登录态。用 skill 自带的：
+
+```bash
+pip install segno            # 一次性，纯 Python 零依赖
+python3 scripts/login.py
+```
+
+它会给你**一个二维码 PNG 的绝对路径**和**一块文本二维码**，用手机 B 站 App 扫，
+扫完自动写出 `BBDown.data`（和 BBDown 自己写的格式完全一样，两边通用）。
+默认等 180 秒（正好是二维码有效期），超时就重跑。
+
+| 想干的事 | 命令 |
+|---|---|
+| 登录 | `python3 scripts/login.py` |
+| 换账号 / 刷新过期的登录态 | `python3 scripts/login.py --force` |
+| 只要图片，不要文本码 | `--qr png` |
+| 指定 PNG 落在哪 | `--qr-out /tmp/qr.png` |
+
+**agent 请注意：不要去调 `BBDown login`。** 它没有任何选项能关掉终端里那一大块
+ASCII 二维码，而且跑起来就阻塞轮询到扫码为止、不会返回——工具调用会被挂死。
+更阴的是 **`BBDown login --help` 不打印帮助，它直接开始真实登录流程**（`login`
+子命令没注册任何选项，`--help` 被当多余参数忽略），所以它也不能拿来做探测。
+
+`BBDown.data` 等价于你的 B 站账号登录态。**别提交进任何仓库、别分享。**
+login.py 会把它权限设成 0600，覆盖前先备份成 `.bak`。
+
 ## 为什么用 BBDown 而不是 yt-dlp
 
 两个都能下，yt-dlp 也是合理选择。这里用 BBDown 的实际理由：
 
-- **登录态是共用的**。BBDown 扫码登录后写下的 `BBDown.data`，同仓的字幕 skill 也要用它去调字幕接口。用 BBDown 就只需要登录一次。
+- **登录态是共用的**。`scripts/login.py` 写下的 `BBDown.data` 就是 BBDown 自己认的那个文件，同仓的字幕 skill 也用它去调字幕接口——登录一次两边都通。
 - 未登录时 B 站会给 412 风控和低清晰度流；BBDown 自己管这套登录态。
 
 如果你已经在用 yt-dlp 并且跑得好，不必换——但下面「怎么判断文件是完整的」那节的结论对两者同样成立。
@@ -87,11 +115,12 @@ B 站限流时接口**返回空结果，不报错**——列表是空的、view 
 
 | 要什么 | 干嘛用 | 怎么装 |
 |---|---|---|
-| BBDown | 下正片 | https://github.com/nilaoda/BBDown/releases 放进 PATH，然后 `BBDown login` 扫码 |
+| BBDown | 下正片 | https://github.com/nilaoda/BBDown/releases 放进 PATH |
+| segno | 扫码登录（一次性） | `pip install segno`，纯 Python 零依赖 |
 | ffmpeg / ffprobe | 校验完整性 | `brew install ffmpeg` |
 | curl | 调接口、下封面 | 系统自带 |
 
-**零 pip 依赖**，纯标准库。
+`download.py` 本身**零 pip 依赖**，纯标准库；只有 `login.py` 要 segno。
 
 `BBDown.data` 等价于你的 B 站登录态。**别提交进任何仓库、别分享**。
 
@@ -114,5 +143,5 @@ out/
 | 下下来没有声音 | 音视频没合流完。`verify_mp4` 会拦住并删掉 |
 | 播到一半就断 | 截断的文件。只有 pts 覆盖判据看得出来 |
 | 「查不到视频信息」 | BV 写错 / 视频被删 / 要代理 / **被限流**（限流是静默的） |
-| 清晰度很低 | 没登录。`BBDown login` |
+| 清晰度很低 | 没登录。`python3 scripts/login.py` |
 | 探不到体积 | BBDown 输出格式变了，正则失配。脚本会退化成不限体积照常下载，不会静默跳过 |

@@ -18,12 +18,20 @@ import bili_api
 DEFAULT_CANARY = os.environ.get("BILI_CANARY", "BV1zsXbBVE5d")
 
 
+# 可选依赖：缺了只是少一部分功能，不是跑不了。
+OPTIONAL = {"segno": "扫码登录用"}
+missing_optional = []
+
+
 def row(name, ok, detail, fix=""):
-    mark = "✓" if ok else "✗"
+    mark = "✓" if ok else ("!" if name in OPTIONAL else "✗")
     line = f"{mark} {name:<12} {detail}"
     if not ok and fix:
         line += f"\n               -> {fix}"
     print(line)
+    if not ok and name in OPTIONAL:
+        missing_optional.append(name)
+        return True          # 不算硬失败
     return ok
 
 
@@ -42,9 +50,15 @@ def main():
         p = shutil.which(exe)
         all_ok &= row(name, bool(p), p or "未找到", fix)
 
+    try:
+        import segno  # noqa: F401
+        row("segno", True, "扫码登录用")
+    except ImportError:
+        row("segno", False, "未安装（扫码登录用）", "pip install segno")
+
     ck = bili_api.cookie_file()
     row("登录 cookie", bool(ck), str(ck) if ck else "未找到 BBDown.data",
-        "跑一次 `BBDown login` 扫码登录。下载公开视频不一定需要，"
+        "跑一次 `python3 scripts/login.py` 扫码登录。下载公开视频不一定需要，"
         "但抓官方字幕必须要（digesting skill 会用到）")
 
     proxies = [k for k in ("ALL_PROXY", "HTTPS_PROXY", "HTTP_PROXY")
@@ -63,7 +77,14 @@ def main():
             "可能是：网络不通 / 需要代理 / 被限流（限流时接口静默返回空，不报错）/ "
             "这个 canary 视频被删了（换一个：--canary <任意公开BV>）")
 
-    print("\n" + ("全部就绪。" if all_ok else "上面有 ✗，先补齐再跑 download.py。"))
+    print()
+    if not all_ok:
+        print("有 ✗，那是硬依赖，先补齐再跑 download.py。")
+    elif missing_optional:
+        print("下载链路就绪。带 ! 的只有扫码登录要用，"
+              "已经有登录态的话不装也行。")
+    else:
+        print("全部就绪。")
     return 0 if all_ok else 1
 
 

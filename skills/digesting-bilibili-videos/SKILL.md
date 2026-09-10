@@ -42,6 +42,34 @@ python3 scripts/digest.py BV1xxx --out ./out --name 我的合集
 | 不要 PDF | `--skip-pdf` |
 | 已经有 srt 了 | `digest.py --srt a.srt --title 标题 --out ./out` |
 
+## 登录
+
+抓官方字幕、拿高清晰度流都要 B 站登录态。用 skill 自带的：
+
+```bash
+pip install segno            # 一次性，纯 Python 零依赖
+python3 scripts/login.py
+```
+
+它会给你**一个二维码 PNG 的绝对路径**和**一块文本二维码**，用手机 B 站 App 扫，
+扫完自动写出 `BBDown.data`（和 BBDown 自己写的格式完全一样，两边通用）。
+默认等 180 秒（正好是二维码有效期），超时就重跑。
+
+| 想干的事 | 命令 |
+|---|---|
+| 登录 | `python3 scripts/login.py` |
+| 换账号 / 刷新过期的登录态 | `python3 scripts/login.py --force` |
+| 只要图片，不要文本码 | `--qr png` |
+| 指定 PNG 落在哪 | `--qr-out /tmp/qr.png` |
+
+**agent 请注意：不要去调 `BBDown login`。** 它没有任何选项能关掉终端里那一大块
+ASCII 二维码，而且跑起来就阻塞轮询到扫码为止、不会返回——工具调用会被挂死。
+更阴的是 **`BBDown login --help` 不打印帮助，它直接开始真实登录流程**（`login`
+子命令没注册任何选项，`--help` 被当多余参数忽略），所以它也不能拿来做探测。
+
+`BBDown.data` 等价于你的 B 站账号登录态。**别提交进任何仓库、别分享。**
+login.py 会把它权限设成 0600，覆盖前先备份成 `.bak`。
+
 ## 抓字幕：只能走 `wbi/v2`
 
 **老接口 `x/player/v2` 返回的是别的视频的字幕——不是截断，是串号。BBDown 走的正是老接口，所以 `BBDown --sub-only` 不可信。**
@@ -106,7 +134,7 @@ python3 scripts/digest.py BV1xxx --out ./out --name 我的合集
 | 要什么 | 哪步用 | 怎么装 |
 |---|---|---|
 | curl | 全部 B 站请求 | 系统自带 |
-| `BBDown.data` 登录态 | 抓字幕 | 装 BBDown 后 `BBDown login` 扫码 |
+| `BBDown.data` 登录态 | 抓字幕 | `pip install segno` 后跑 `python3 scripts/login.py` 扫码 |
 | `DEEPSEEK_API_KEY` | 脑图 | `echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local`（`--skip-mindmap` 可绕过） |
 | `fpdf2` `fonttools` | PDF | `pip install fpdf2 fonttools`（`--skip-pdf` 可绕过） |
 

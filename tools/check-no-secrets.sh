@@ -26,7 +26,9 @@ hit "私有域名/桶"       '(kexiaoyu\.com|radar-assets)'
 hit "本机绝对路径"      '(/Volumes/4TB-SD|/Users/[a-z]+/(Projects|repos)/)'
 # 凭证形状。BBDown.data 只允许作为路径名出现，不允许出现文件内容里的 cookie 字段。
 hit "疑似 API key"      'sk-[0-9a-zA-Z]{8,}'
-hit "B站登录态明文"     '(SESSDATA=|bili_jct=|DedeUserID=)'
+# 只抓「字段名 = 一串足够长的值」这种真泄漏形态。裸的 `SESSDATA=` 会出现在
+# 校验代码和文档里（比如 `if "SESSDATA=" in text`），那不是泄漏，不能算。
+hit "B站登录态明文"     '(SESSDATA|bili_jct|DedeUserID)=[A-Za-z0-9%._-]{16,}'
 hit "Cloudflare 标识"   '\b[0-9a-f]{32}\b'
 
 if [ "$fail" = 0 ]; then

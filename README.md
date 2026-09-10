@@ -22,7 +22,8 @@
 
 | 要什么 | 谁需要 | 怎么装 |
 |---|---|---|
-| [BBDown](https://github.com/nilaoda/BBDown/releases) | 两个都要 | 放进 PATH，然后 `BBDown login` 扫码登录 |
+| [BBDown](https://github.com/nilaoda/BBDown/releases) | 两个都要 | 放进 PATH |
+| `segno` | 扫码登录（一次性） | `pip install segno`，然后跑 `python3 scripts/login.py` 扫码 |
 | ffmpeg / ffprobe | 下载 skill | `brew install ffmpeg` |
 | `fpdf2` `fonttools` | 出 PDF 时 | `pip install fpdf2 fonttools` |
 | DeepSeek API key | 生成脑图时 | `echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local` |

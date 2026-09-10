@@ -22,17 +22,21 @@ DEFAULT_CANARY = os.environ.get("BILI_CANARY", "BV1zsXbBVE5d")
 # 可选依赖：缺了只是少一部分功能，不是跑不了。
 OPTIONAL = {"fpdf": "--skip-pdf", "fontTools": "--skip-pdf",
             "DEEPSEEK_API_KEY": "--skip-mindmap"}
+# segno 只有「还没登录、需要扫码」时才用得上，单独处理（它没有对应的 flag）。
+SOFT = {"segno"}
 missing_optional = {}
 
 
 def row(name, ok, detail, fix=""):
-    mark = "✓" if ok else ("!" if name in OPTIONAL else "✗")
+    mark = "✓" if ok else ("!" if name in OPTIONAL or name in SOFT else "✗")
     print(f"{mark} {name:<16} {detail}")
     if not ok and fix:
         print(f"                   -> {fix}")
     if not ok and name in OPTIONAL:
         missing_optional[name] = OPTIONAL[name]
         return True          # 不算硬失败
+    if not ok and name in SOFT:
+        return True
     return ok
 
 
@@ -70,9 +74,16 @@ def main():
                   "echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local"
                   "（或加 --skip-mindmap 只要字幕和可读版）")
 
+    try:
+        import segno  # noqa: F401
+        row("segno", True, "扫码登录用")
+    except ImportError:
+        row("segno", False, "未安装（扫码登录用）", "pip install segno")
+
     ck = bili_api.cookie_file()
     all_ok &= row("登录 cookie", bool(ck), str(ck) if ck else "未找到 BBDown.data",
-                  "跑 `BBDown login` 扫码登录。**字幕接口没有它就只会返回空列表**")
+                  "跑 `python3 scripts/login.py` 扫码登录。"
+                  "**字幕接口没有它就只会返回空列表**")
 
     print()
     meta = bili_api.view_by_bvid(args.canary)
@@ -91,7 +102,7 @@ def main():
         row("字幕接口", False,
             f"canary 也拿不到中文字幕（返回 {len(subs)} 条其它语言）",
             "这说明不是「某个视频恰好没字幕」，而是 cookie 失效或被限流。"
-            "先 `BBDown login` 重新登录；还不行就等一会儿再试。")
+            "先 `python3 scripts/login.py --force` 重新登录；还不行就等一会儿再试。")
 
     print()
     if not all_ok:

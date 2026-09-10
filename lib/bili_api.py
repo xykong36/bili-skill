@@ -40,6 +40,14 @@ def _curl_json(url, cookie=None, referer=None, retry=RETRY):
     return None
 
 
+def get_json(url, cookie=None, referer=None, retry=RETRY):
+    """GET 一个返回 JSON 的接口。走 curl 子进程，所以自动继承进程级 ALL_PROXY。
+
+    登录流程也用它 —— 本机直连 B 站接口是不通的，必须跟其它请求走同一条出口。
+    """
+    return _curl_json(url, cookie=cookie, referer=referer, retry=retry)
+
+
 def _get(param):
     for attempt in range(RETRY):
         body = _curl_json(f"{API}?{param}", retry=1)
@@ -53,12 +61,19 @@ def cookie_file():
     """BBDown 登录后写的 cookie 文件。字幕接口必须带它——不带就返回空字幕列表。
 
     BBDown 把它写在自己可执行文件旁边（或当年运行时的工作目录），所以按
-    可执行文件真身 → HOME 的顺序找。BILI_COOKIE_FILE 可以直接指定。
+    可执行文件真身 → HOME 的顺序找。
+
+    **BILI_COOKIE_FILE 一旦设了就是权威的**：指到哪就用哪，文件不存在也不再
+    往下找。显式指定了一个路径却被悄悄换成另一个账号的 cookie，是很难查的坑
+    （多账号、跑测试时尤其）。
 
     这个文件等价于你的 B 站登录态，**别提交进任何仓库、别分发**。
     """
     env = os.environ.get("BILI_COOKIE_FILE")
-    cands = [Path(env)] if env else []
+    if env:
+        p = Path(env).expanduser()
+        return p if p.is_file() else None
+    cands = []
     exe = shutil.which("BBDown")
     if exe:
         cands.append(Path(os.path.realpath(exe)).parent / "BBDown.data")
@@ -67,6 +82,27 @@ def cookie_file():
         if p.is_file():
             return p
     return None
+
+
+def cookie_target():
+    """登录成功后该把 BBDown.data 写到哪。
+
+    和 cookie_file() 同一套优先级，区别是它不要求文件已存在 —— 挑第一个
+    **目录可写**的位置。BBDown 那个目录常常是只读的（比如装在 /opt 或
+    只读挂载里），写不进去就退回 ~/BBDown.data，bili_api 照样找得到。
+    """
+    env = os.environ.get("BILI_COOKIE_FILE")
+    if env:
+        return Path(env).expanduser()
+    cands = []
+    exe = shutil.which("BBDown")
+    if exe:
+        cands.append(Path(os.path.realpath(exe)).parent / "BBDown.data")
+    cands.append(Path.home() / "BBDown.data")
+    for p in cands:
+        if os.access(p.parent, os.W_OK):
+            return p
+    return Path.home() / "BBDown.data"
 
 
 def cookie():
