@@ -23,12 +23,51 @@
 也可以手动：把 `skills/digesting-bilibili-videos/` 拷进 `~/.claude/skills/`，再把仓库根的 `lib/` 里的文件拷进**这个 skill 自己的 `lib/`**（文件名不冲突）。
 注意不是拷到 `~/.claude/skills/lib/` —— 那样 `_paths.py` 找不到 `bili_api.py` 会直接退出。
 
+## 少弹几次权限窗（可选）
+
+SKILL.md 的 frontmatter 里有一条：
+
+```yaml
+allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py *)
+```
+
+它让这个 skill 自己的命令免确认地跑。但这个授权**只在触发 skill 的那一轮有效，
+你下一条消息发出去就清空了**（见[官方文档](https://docs.claude.com/en/docs/claude-code/skills#pre-approve-tools-for-a-skill)）。
+嚼一期视频要抓字幕、调 LLM、出 PDF，通常跨好几轮对话，所以第二轮起会反复弹窗。
+
+想按会话放行，把同一条规则写进 `~/.claude/settings.json`。
+注意 `${CLAUDE_SKILL_DIR}` **只在 SKILL.md 正文和 `allowed-tools` 里会被展开**，
+settings 里不会，所以这里得填绝对路径。先把它打出来：
+
+```bash
+# 装成插件的
+ls -d ~/.claude/plugins/cache/bili-skills/bili-skills/*/skills/digesting-bilibili-videos/scripts/bili.py
+# 手动拷进 ~/.claude/skills/ 的
+ls -d ~/.claude/skills/digesting-bilibili-videos/scripts/bili.py
+```
+
+然后：
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 /Users/你/.claude/plugins/cache/bili-skills/bili-skills/0.4.0/skills/digesting-bilibili-videos/scripts/bili.py *)"
+    ]
+  }
+}
+```
+
+**别用 `*` 代替版本号。** Bash 规则里出现在子命令（这里就是脚本路径）之前的 `*`
+会让规则比你想的宽得多，Claude Code 启动时也会就此警告。代价是插件升级之后
+这条要跟着改一次。
+
 ## 先决条件
 
 | 要什么 | 谁需要 | 怎么装 |
 |---|---|---|
 | [BBDown](https://github.com/nilaoda/BBDown/releases) | 下载 | 放进 PATH |
-| `segno` | 扫码登录（一次性） | `pip install segno`，然后跑 `python3 scripts/bili.py login` 扫码 |
+| `segno` | 扫码登录（一次性） | `pip install segno`，然后跑 `python3 skills/digesting-bilibili-videos/scripts/bili.py login` 扫码 |
 | ffmpeg / ffprobe | 下载（完整性校验） | `brew install ffmpeg` |
 | `fpdf2` `fonttools` | 出 PDF 时 | `pip install fpdf2 fonttools` |
 | `pypdf` | 只在换字体后自检时 | `pip install pypdf` |
@@ -41,7 +80,7 @@ skill 自带 `scripts/bili.py doctor`，缺什么它会直接告诉你装什么�
 注意一个坑：**agent 沙箱里的 `python3` 可能跟你交互式终端里的不是同一个**。
 pyenv / conda 的 shims 靠 shell 启动脚本注入 PATH，而沙箱常常起的是不加载
 这些脚本的裸 shell —— 那时 `python3` 会落到系统自带的那个。所以依赖要装在
-**跑脚本的那个 python** 里。不确定就先跑 `python3 scripts/bili.py doctor`，
+**跑脚本的那个 python** 里。不确定就先跑 `python3 skills/digesting-bilibili-videos/scripts/bili.py doctor`，
 它报什么缺什么就是那个 python 的实情。
 
 
