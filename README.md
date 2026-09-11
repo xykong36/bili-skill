@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-open%20protocol-0A9EDC)](https://docs.claude.com/en/docs/claude-code/skills)
 [![Runtimes](https://img.shields.io/badge/runtimes-50%2B-8A63D2)](#装)
-[![Skill](https://img.shields.io/badge/skill-digesting--bilibili--videos-555)](skills/digesting-bilibili-videos/SKILL.md)
+[![Skill](https://img.shields.io/badge/skill-digesting--bilibili--videos-555)](SKILL.md)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB)](#需要准备什么)
 
 **中文** | [English](README.en.md)
@@ -154,17 +154,18 @@ B 站给的是这个，给播放器打轴用的，两秒一断、没标点：
 
 ## 装
 
+**Claude Code**：
+
 ```
 /plugin marketplace add xykong36/bili-skill
 /plugin install bili-skill
 ```
 
-不用 Claude Code？把 `skills/digesting-bilibili-videos/` 拷进你那个工具的 skills 目录，
-再把本仓库根目录 `lib/` 里的文件拷进**这个 skill 自己的 `lib/`**
-（不是 skills 目录下的 `lib/`，放错了会找不到依赖）。
-走的是开放的 Agent Skills 协议，不绑定某一家。
+**别的工具**（Cursor、Codex、Gemini CLI…）：把这句话发给你的 AI——
 
-装完不用配置，直接说话。
+> 帮我把 https://github.com/xykong36/bili-skill 装成 skill
+
+装完直接说话，不用配置。
 
 ---
 
@@ -201,8 +202,8 @@ Python 3.9+。不确定就跟它说「检查一下环境」，缺什么它告诉
 
 ---
 
-想改它、或者想看它完整的行为规则：[SKILL.md](skills/digesting-bilibili-videos/SKILL.md)
-和 [references/](skills/digesting-bilibili-videos/references/)。
+想改它、或者想看它完整的行为规则：[SKILL.md](SKILL.md)
+和 [references/](references/)。
 
 `examples/` 里的文字产物只放了开头节选，版权归原作者
 [林亦LYi](https://space.bilibili.com/4401694)——想看完整内容请去

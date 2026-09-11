@@ -8,7 +8,7 @@
 不是截断，是串号：同一个视频连查三次，拿到的是 461条/689s、86条/170s、614条/1063s
 三份内容完全不相干的字幕（"蔡徐坤被软封禁""维鲁斯"之类，跟视频毫无关系）。
 BBDown 走的就是这个老接口，所以它的 `--sub-only` 输出同样不可信，
-实测同一视频连跑三次拿到 326条 / 2053条(1小时) / 326条。完整实测表见 skills/digesting-bilibili-videos/references/subtitle-api.md。
+实测同一视频连跑三次拿到 326条 / 2053条(1小时) / 326条。完整实测表见 references/subtitle-api.md。
 """
 import json
 import os

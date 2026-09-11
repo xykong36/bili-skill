@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-open%20protocol-0A9EDC)](https://docs.claude.com/en/docs/claude-code/skills)
 [![Runtimes](https://img.shields.io/badge/runtimes-50%2B-8A63D2)](#install)
-[![Skill](https://img.shields.io/badge/skill-digesting--bilibili--videos-555)](skills/digesting-bilibili-videos/SKILL.md)
+[![Skill](https://img.shields.io/badge/skill-digesting--bilibili--videos-555)](SKILL.md)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB)](#what-you-need)
 
 [中文](README.md) | **English**
@@ -25,7 +25,7 @@ That's what a 14-minute video turns into: 13 sections, 143 points, color-coded b
 Every timestamp is live — click one and you're back at that second of the video.
 
 > The sample video and all example artifacts are in Chinese, as are the deep-dive documents
-> under `skills/digesting-bilibili-videos/references/`. The skill itself works the same way
+> under `references/`. The skill itself works the same way
 > whatever language you speak to it in.
 
 ---
@@ -167,17 +167,18 @@ The day the video goes down, the title and the numbers from the day you saved it
 
 ## Install
 
+**Claude Code**:
+
 ```
 /plugin marketplace add xykong36/bili-skill
 /plugin install bili-skill
 ```
 
-Not on Claude Code? Copy `skills/digesting-bilibili-videos/` into that tool's skills directory,
-then copy the files from this repo's root `lib/` into **that skill's own `lib/`**
-(not the skills directory's `lib/` — from there it won't find its dependencies).
-It runs on the open Agent Skills protocol, not tied to any one vendor.
+**Any other tool** (Cursor, Codex, Gemini CLI…): send your AI this line —
 
-Nothing to configure afterwards. Just talk to it.
+> Install https://github.com/xykong36/bili-skill as a skill for me
+
+Nothing to configure. Just talk to it.
 
 ---
 
@@ -215,8 +216,8 @@ control. The skill talks to bilibili and nowhere else, and never likes, comments
 
 ---
 
-Want to change it, or read the full behavior spec: [SKILL.md](skills/digesting-bilibili-videos/SKILL.md)
-and [references/](skills/digesting-bilibili-videos/references/) (Chinese).
+Want to change it, or read the full behavior spec: [SKILL.md](SKILL.md)
+and [references/](references/) (Chinese).
 
 The text artifacts in `examples/` are opening excerpts only. Copyright belongs to the original
 creator, [林亦LYi](https://space.bilibili.com/4401694) — watch the full thing
