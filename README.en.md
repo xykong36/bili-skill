@@ -4,59 +4,41 @@
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-open%20protocol-0A9EDC)](https://docs.claude.com/en/docs/claude-code/skills)
 [![Runtimes](https://img.shields.io/badge/runtimes-50%2B-8A63D2)](#install)
 [![Skill](https://img.shields.io/badge/skill-digesting--bilibili--videos-555)](skills/digesting-bilibili-videos/SKILL.md)
-[![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB)](#prerequisites)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB)](#what-you-need)
 
 [中文](README.md) | **English**
 
-> One BV id in, something you can read, search and keep out.
+## Turn bilibili videos into something you can read, search and keep
 
-An **Agent Skill** that turns bilibili videos into things worth keeping.
-Built on the open Agent Skills protocol, it runs in **50+ compatible runtimes** — Claude Code,
-Codex, Cursor, OpenClaw, Hermes Agent, CodeBuddy, Workbuddy, Gemini CLI, OpenCode and others.
+That row of "watch later" in your favorites — we both know you won't.
+And the ones you did watch leave nothing behind: quoting a single line means scrubbing
+the timeline three times, and the screenshots you grabbed aren't searchable at all.
+**Video is the densest medium of our time, and the least retrievable.**
 
-Two parallel workflows:
+This is an Agent Skill. Install it into Claude Code (or Cursor / Codex / Gemini CLI —
+50+ compatible tools), then just talk to it. No commands to memorize.
 
-- **Download** — BV id → the video mp4 + cover image + metadata, with an integrity check that actually catches broken files.
-- **Digest** — BV id → official AI subtitles → a readable transcript → an OPML mindmap → a content outline → two searchable Chinese PDFs.
+<img src="examples/previews/outline-page.png" width="620" alt="outline PDF">
 
-The two workflows are **parallel, not a pipeline**: subtitles come straight off the API and never touch the mp4, so you don't have to download a video to get its text.
-They share one bilibili API wrapper and one BBDown login state — log in once, both sides work.
+That's what a 14-minute video turns into: 13 sections, 143 points, color-coded by six labels —
+`观点` (claim) `数据` (data) `案例` (case) `金句` (quote) `做法` (how-to) `交锋` (clash).
+Every timestamp is live — click one and you're back at that second of the video.
 
-> Note: the deep-dive documents under `skills/digesting-bilibili-videos/references/` are written in Chinese. The findings they back are summarized in English below.
+> The sample video and all example artifacts are in Chinese, as are the deep-dive documents
+> under `skills/digesting-bilibili-videos/references/`. The skill itself works the same way
+> whatever language you speak to it in.
 
-## What it looks like
+---
 
-That row of "watch later" bookmarks — we both know you're not going back to them.
+## One video in, this whole chain out
 
-And the ones you did finish leave nothing behind: to quote a single line you scrub the
-timeline three times over; to check whether it covered some point you rewatch the whole
-thing; the screenshots you took pile up in an album where not one word is searchable.
-**Video is the densest medium we have, and the least searchable.**
+Sample: [《苹果新CEO凭啥是他？》](https://www.bilibili.com/video/BV1oC5q6BESu)
+("Why him as Apple's new CEO?") · by 林亦LYi · 14:09 · 1.05M views
+(every file below is in [`examples/`](examples/) — open them right now, nothing to install)
 
-One BV id, one command. Below is everything a 14-minute episode leaves behind.
+### ① Official AI subtitles → ② a readable article
 
-### 143 points, typeset, clickable and searchable
-
-<img src="examples/previews/outline-page.png" width="620" alt="Outline PDF">
-
-The episode is split into 13 sections and 143 points, color-coded by six tags —
-`观点` claim, `数据` data, `案例` example, `金句` quote, `做法` method, `交锋` tension.
-Every timestamp is live: click it and you land on that second of the original video.
-
-### The whole episode on one page
-
-<img src="examples/previews/mindmap-full.png" width="420" alt="Mindmap PDF, full page">
-
-The page sizes itself to the content — nothing is cut, nothing is cramped. Zoomed in:
-
-<img src="examples/previews/mindmap-detail.png" width="720" alt="Mindmap PDF, detail">
-
-Vector typesetting, so it stays sharp at any zoom, and the Chinese text inside the PDF
-is selectable and searchable.
-
-### Underneath it all, a transcript you can actually read
-
-The official AI subtitles arrive like this — chopped every two seconds, no punctuation:
+What bilibili hands you is cue-timing for a player: chopped every two seconds, no punctuation.
 
 ```srt
 1
@@ -68,252 +50,196 @@ The official AI subtitles arrive like this — chopped every two seconds, no pun
 库克就下车了
 ```
 
-And come out like this, merged into real paragraphs, each keeping one seekable timestamp:
+What you get back:
 
 ```markdown
 # 苹果新CEO凭啥是他？
 
 > 全文时长约 13:59 · 共 43 段 · 时间戳为该段起始位置
 
-**`[00:00]`** 苹果刚过完50岁生日库克就下车了新上任的苹果CEO呢名字叫john turner
-约翰特努斯他还是马斯克的宾大同届校友说到宾大呢哇那他的优秀毕业生可就太多了…
+---
+
+**`[00:00]`** 苹果刚过完50岁生日库克就下车了新上任的苹果CEO呢名字叫john turner约翰特努斯
+他还是马斯克的宾大同届校友说到宾大呢哇那他的优秀毕业生可就太多了…
+
+**`[00:20]`** 咱们对特努斯的印象大多停留在发布会上这次呢为了深入了解这哥们我又温习了一下
+苹果三大名著检索关键词turn他的名字都没出现过…
 ```
 
-29 KB of subtitle shards → a 15 KB, 43-paragraph read.
+**29 KB of subtitle shards → a 15 KB, 43-paragraph read.** Fourteen minutes, skimmed in two.
 
-> **[`examples/` holds the real files from this run](examples/)** — srt, reading edition,
-> OPML, outline, metadata. Click and look; nothing to install. The sample is
-> [《苹果新CEO凭啥是他？》](https://www.bilibili.com/video/BV1oC5q6BESu) by 林亦LYi;
-> the text artifacts are opening excerpts only and the content belongs to its author.
+Each paragraph keeps one timestamp so you can go back and check: spot a line worth quoting,
+jump to `[00:20]` and hear it in the speaker's own words.
+
+### ③ Article → a labeled outline
+
+Not a summary — the speaker's claims pulled apart from the evidence that holds them up:
+
+```markdown
+## 2. `[00:43]` 宾大四年：规规矩矩的优等生
+
+- **数据** 1993 年入宾大，主修机械工程与应用力学，辅修心理学
+  - *案例* 校游泳队骨干，连续 4 年拿奖
+- **数据** 宾大日报搜 Ternus 只有两条结果
+  - *案例* 第一条是 94 年游泳夺冠，报道不到两行
+  - *案例* 第二条就是官宣接班苹果 CEO 那天
+  - **数据** 反观同校马斯克，随手一搜一大长串
+- *案例* 绰号 crash：大四差点干废全校唯一一台数控机床
+- **交锋** 没有辍学搞发明，也没有车库创业，规规矩矩
+  - > "有些人生来便注定撼动世界"
+```
+
+Six labels, each chosen by what the line **actually is**:
+
+| `观点` claim | `数据` data | `案例` case | `金句` quote | `做法` how-to | `交锋` clash |
+|---|---|---|---|---|---|
+| assertion, judgment, conclusion | numbers, ratios, scale | story, first-hand experience | a line worth quoting verbatim | steps, advice, method | question and answer, disagreement |
+
+**One glance tells you which line is the conclusion and which lines hold it up.**
+This 14-minute episode came apart into 143 points.
+
+### ④ Outline → mindmap + PDF
+
+<img src="examples/previews/mindmap-full.png" width="420" alt="mindmap PDF, full view">
+
+The whole episode on one page — the page size adapts to the content, so nothing is split or cramped.
+Zoomed in:
+
+<img src="examples/previews/mindmap-detail.png" width="720" alt="mindmap PDF, zoomed in">
+
+Vector typesetting, sharp at any zoom, and the Chinese inside the PDF is **searchable and copyable**.
+The mindmap also comes as an `.opml` you can drag straight into XMind, MindNode, 幕布 or Freeplane.
+Run several episodes together and they share one mindmap book and one outline book.
+
+---
+
+## You say / you get
+
+| You say | You get |
+|---|---|
+| "download this bilibili video" | mp4 + cover + views, likes and the rest |
+| "turn it into something readable" | Markdown with timestamps |
+| "make these into mindmaps and a PDF" | outline + OPML + two searchable PDFs |
+| "grab the video too while you're at it" | both of the above |
+| "check my setup" | what's missing and the exact command to install it |
+
+**You don't have to download a video to get its text** — subtitles come straight off the API
+in seconds and cost you no disk. Pass several links at once for a batch; finished work is
+recognized and skipped, so an interrupted run just picks up where it stopped.
+
+<details>
+<summary>What the files look like</summary>
+
+```
+科技合集/
+├── BV1oC5q6BESu.mp4                                       the video
+├── BV1oC5q6BESu.jpg                                       cover image
+├── BV1oC5q6BESu.info.json                                 title/duration/views/likes/uploader
+├── 20260515-苹果新CEO凭啥是他？-BV1oC5q6BESu.srt            raw subtitles
+├── 20260515-苹果新CEO凭啥是他？-BV1oC5q6BESu-阅读版.md       the readable article
+├── 20260515-苹果新CEO凭啥是他？-BV1oC5q6BESu-大纲.md         the labeled outline
+├── 20260515-苹果新CEO凭啥是他？-BV1oC5q6BESu.opml            the mindmap
+├── 科技合集-mindmap.pdf                                    one book per batch
+└── 科技合集-outline.pdf                                    one book per batch
+```
+
+`-阅读版` means "reading edition" and `-大纲` means "outline" — those Chinese suffixes are the
+real filenames, so don't translate them when you go looking for the files. Names carry the date
+and title, so a folder still makes sense three months later.
+
+The real `info.json`:
+
+```json
+{
+  "bvid": "BV1oC5q6BESu",
+  "title": "苹果新CEO凭啥是他？",
+  "owner": "林亦LYi",
+  "duration": 849,
+  "view": 1050422,
+  "like": 26260,
+  "desc": "特努斯是谁？他会带苹果走向何方？",
+  "url": "https://www.bilibili.com/video/BV1oC5q6BESu"
+}
+```
+
+The day the video goes down, the title and the numbers from the day you saved it are still yours.
+
+</details>
+
+---
 
 ## Install
-
-**Claude Code** (plugin marketplace):
 
 ```
 /plugin marketplace add xykong36/bili-skills
 /plugin install bili-skills
 ```
 
-**Any other runtime** (Codex / Cursor / OpenClaw / Hermes Agent / CodeBuddy / Workbuddy / Gemini CLI / OpenCode …):
-copy `skills/digesting-bilibili-videos/` into that runtime's skills directory (`~/.claude/skills/` for Claude Code; each runtime has its own path),
-then copy the files from this repo's root `lib/` into **that skill's own `lib/`** (no filename collisions).
-Not into the skills directory's `lib/` — from there `_paths.py` won't find `bili_api.py` and will exit immediately.
+Not on Claude Code? Copy `skills/digesting-bilibili-videos/` into that tool's skills directory,
+then copy the files from this repo's root `lib/` into **that skill's own `lib/`**
+(not the skills directory's `lib/` — from there it won't find its dependencies).
+It runs on the open Agent Skills protocol, not tied to any one vendor.
 
-After that, just say "download this bilibili video" or "turn this episode into a mindmap" and the skill kicks in.
+Nothing to configure afterwards. Just talk to it.
 
-> The one runtime-specific detail: SKILL.md writes its commands as `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py ...`,
-> and `${CLAUDE_SKILL_DIR}` is a Claude Code placeholder that other runtimes don't expand —
-> there, just run the same script by its real path. The scripts themselves are pure Python stdlib and runtime-agnostic.
+---
 
-## What it produces
+## What you need
 
-```
-out/
-├── BV1xxx.mp4                      download: the video (absent with --no-video or over the size cap)
-├── BV1xxx.jpg                      download: cover image
-├── BV1xxx.info.json                download: bvid/aid/cid/title/duration/views/likes/comments/uploader/desc/url
-├── 20250825-title-BV1xxx.srt         digest 1: official AI subtitles
-├── 20250825-title-BV1xxx-阅读版.md    digest 2: merged into paragraphs (reading edition)
-├── 20250825-title-BV1xxx.opml        digest 3: mindmap
-├── 20250825-title-BV1xxx.source.txt  digest 3: the outline text — API-written or agent-written, it lands here
-├── 20250825-title-BV1xxx-大纲.md      digest 4: outline
-├── <--name>-mindmap.pdf            digest 5: one book per batch
-└── <--name>-outline.pdf            digest 5: one book per batch
-```
-
-The Chinese suffixes are the real filenames: `-阅读版.md` is the reading edition, `-大纲.md` the outline. Don't translate them when you go looking for the files.
-
-Download names files by bare BV id; `--stem-title` switches to `date-title-BV`. Digest **always** uses the long form.
-
-The two PDFs are named **only** from `--name` (default `B站合集`), and contain **only the BV ids passed in that one invocation**.
-Run it again into the same `--out` with the same `--name` and the previous book is silently overwritten.
-
-## How it works
-
-Self-check first — it tells you exactly which install command you're missing:
-
-```bash
-python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor
-```
-
-Then route by what you actually want:
-
-| You want | Workflow | Command |
-|---|---|---|
-| A local copy of the video / cover / view count | download | `bili.py download BV1xxx --out ./out` |
-| Subtitles, transcript, article, mindmap, outline, PDF | digest | `bili.py digest BV1xxx --out ./out --name BookName` |
-| Both | one command | `bili.py digest BV1xxx --out ./out --with-video` |
-
-(The table shortens it to `bili.py` for readability; in practice type the full path. Under Claude Code that's `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py ...` — that exact form is what the `allowed-tools` rule matches, and a shorter one costs you an extra permission prompt. On runtimes that don't expand the variable, use the skill's real path.)
-
-Digest is five steps, each idempotent, so a re-run never redoes finished work:
-
-| Step | Output | Needs |
-|---|---|---|
-| 1. Fetch official AI subtitles | `<stem>.srt` | login cookie |
-| 2. Merge into paragraphs | `<stem>-阅读版.md` | stdlib only |
-| 3. Build the mindmap | `<stem>.opml` + `.source.txt` | **the agent writes it**, or an API key |
-| 4. Render the outline | `<stem>-大纲.md` | local, sub-second |
-| 5. Emit two PDFs | `<name>-mindmap.pdf` / `<name>-outline.pdf` | `fpdf2` `fonttools` |
-
-Steps 4 and 5 both consume step 3's opml, so if step 3 is skipped or fails, 3/4/5 all drop — that's designed degradation, steps 1 and 2 still deliver. Want only subtitles and the reading edition? `--skip-mindmap`.
-
-### The three-phase handoff when there's no API key
-
-The mindmap step **doesn't call an API by default** — it hands off to whichever agent is running the skill:
-
-```
-① bili.py digest BV1 BV2 --out ./out --name BookName
-     emits subtitles and reading editions, then prints a worklist of absolute paths:
-     which file to read for each episode, and where to write
-② the agent does it: read assets/mindmap-outline-prompt.md, follow it to turn each
-     reading edition into an indented outline, write it to the <stem>.source.txt
-     the worklist named                                    (no script runs here)
-③ bili.py digest BV1 BV2 --out ./out --name BookName --build
-     reads .source.txt → mindmap → outline → two PDFs
-```
-
-Exit codes: `0` all done / `1` something broke / `2` nothing broke, some episodes are waiting on you to write their outline.
-
-Before touching any file, the script prints which backend it picked:
-
-| Environment | Path | Who does the work |
-|---|---|---|
-| `DEEPSEEK_API_KEY` / `BILI_LLM_API_KEY` set | HTTP | the script itself, one command end to end |
-| **nothing set (default)** | **handoff** | **the agent running this skill** |
-| `--mindmap-backend agent` | handoff | the agent (even if a key is set) |
-| `--skip-mindmap` | skipped | nobody; steps 3/4/5 all drop |
-
-`OPENAI_API_KEY` is **not** picked up automatically — too many other things use that variable, so it takes an explicit `--mindmap-backend api`.
-
-## Prerequisites
-
-| What | Who needs it | How |
-|---|---|---|
-| [BBDown](https://github.com/nilaoda/BBDown/releases) | download | put it on PATH |
-| `segno` | QR login (one-time) | `pip install segno`, then run `python3 skills/digesting-bilibili-videos/scripts/bili.py login` and scan |
-| ffmpeg / ffprobe | download (integrity check) | `brew install ffmpeg` |
-| `fpdf2` `fonttools` | when emitting PDFs | `pip install fpdf2 fonttools` |
-| `pypdf` | only for the self-check after swapping fonts | `pip install pypdf` |
-| An OpenAI-compatible API key | **optional**, for the mindmap step | Works without one — the mindmap step hands off to whatever agent is running the skill (Claude Code / Codex / anything). For unattended runs: `echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local` |
-
-Fetching subtitles, producing the reading edition, and the entire digest chain in handoff mode use **nothing but the Python standard library**.
-
-The skill ships `scripts/bili.py doctor`, which names the exact install command for whatever is missing.
-
-**Python 3.9+** (the full chain has been run on both 3.9 and 3.12).
-
-One trap worth knowing: **the `python3` inside an agent sandbox may not be the one in your interactive terminal.**
-pyenv / conda shims get onto PATH through shell startup scripts, and sandboxes often launch a bare shell that doesn't load them — at which point `python3` falls back to the system one. So install dependencies into **the python that actually runs the script**. When in doubt run `python3 skills/digesting-bilibili-videos/scripts/bili.py doctor` first; whatever it reports missing is the truth for that python.
-
-## Fewer permission prompts (optional)
-
-SKILL.md's frontmatter carries this line:
-
-```yaml
-allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py *), Read
-```
-
-It lets the skill's own commands run without confirmation. But that grant **only holds for the turn that triggered the skill — your next message clears it** (see the [official docs](https://docs.claude.com/en/docs/claude-code/skills#pre-approve-tools-for-a-skill)).
-Digesting an episode means fetching subtitles, writing an outline, emitting PDFs — usually several turns — so from the second turn on you get prompted again and again.
-
-To grant it for the whole session, put the same rule in `~/.claude/settings.json`.
-Careful: `${CLAUDE_SKILL_DIR}` **is only expanded inside SKILL.md's body and its `allowed-tools`**, never in settings, so you need the absolute path here. Print it first:
-
-```bash
-# installed as a plugin
-ls -d ~/.claude/plugins/cache/bili-skills/bili-skills/*/skills/digesting-bilibili-videos/scripts/bili.py
-# manually copied into ~/.claude/skills/
-ls -d ~/.claude/skills/digesting-bilibili-videos/scripts/bili.py
-```
-
-Then:
-
-```json
-{
-  "permissions": {
-    "allow": [
-      "Bash(python3 /Users/you/.claude/plugins/cache/bili-skills/bili-skills/1.0.0/skills/digesting-bilibili-videos/scripts/bili.py *)"
-    ]
-  }
-}
-```
-
-**Don't put `*` where the version number goes.** In a Bash rule, a `*` appearing before the subcommand (here, the script path) makes the rule far broader than you intended, and Claude Code warns about it at startup. The price is that you re-edit this line once after every plugin upgrade.
-
-## Why use this instead of writing your own
-
-The value of these two workflows isn't the line count — it's the **judgment calls you only learn by getting burned**:
-
-- Bilibili's old subtitle endpoint `x/player/v2` **returns another video's subtitles** (not truncated — wrong video entirely), and `BBDown --sub-only` goes through exactly that endpoint. Measurements in [references/subtitle-api.md](skills/digesting-bilibili-videos/references/subtitle-api.md) (Chinese).
-- **Comparing durations tells you nothing** about whether an mp4 is complete: truncate a faststart mp4 and ffprobe still reports the full duration, and even `ffmpeg -c copy -f null` exits 0. Only comparing the last video packet's pts catches it.
-- **Never download straight onto exFAT or a network share**: the fragment merge sucks macOS `._` sidecar files into the output and you get a dead file that fails with `moov atom not found`.
-- An empty subtitle list means one of three things (no subtitles / not logged in / rate-limited), and the API won't tell you which.
-- For Chinese text in a PDF to stay searchable you can't just swap in any font — plenty of Chinese fonts map common characters into the Kangxi Radicals block.
-
-## Why BBDown instead of yt-dlp
-
-Both work, and yt-dlp is a reasonable choice. The practical reasons for BBDown here:
-
-- **The login state is shared.** The `BBDown.data` written by `scripts/bili.py login` is the very file BBDown itself reads, and the subtitle workflow uses it to call the subtitle API — log in once, both sides work.
-- Logged out, bilibili serves 412 risk-control responses and low-quality streams; BBDown manages that login state itself.
-
-If you're already on yt-dlp and happy, don't switch — but the "how to tell a file is complete" conclusions in [references/mp4-integrity.md](skills/digesting-bilibili-videos/references/mp4-integrity.md) (Chinese) hold for both.
-
-## Repository layout
-
-```
-bili-skills/
-├── .claude-plugin/          plugin + marketplace manifests
-├── examples/                real output from one episode — click and look
-├── lib/                     plugin-level shared library, used by both workflows
-│   ├── bili_api.py          thin bilibili API wrapper: metadata + subtitle list; stdlib and curl only
-│   └── bili_login.py        QR login → writes the BBDown.data that BBDown itself accepts
-├── evals/                   six scenarios for checking behavior hasn't regressed after a SKILL.md change
-├── tools/check-no-secrets.sh  pre-release credential sweep; any hit exits 1
-└── skills/digesting-bilibili-videos/
-    ├── SKILL.md             the skill itself: routing table, both workflows, handoff protocol, artifacts, FAQ
-    ├── scripts/
-    │   ├── bili.py          the single entry point: doctor / login / download / digest
-    │   ├── download.py      workflow A: mp4 + jpg + info.json, including verify_mp4()
-    │   ├── digest.py        workflow B: subtitles → reading edition → opml → outline → PDFs
-    │   ├── doctor.py        dependency self-check; a canary probe separates "no subtitles" from "not logged in / rate-limited"
-    │   └── _common.py       primitives shared by both workflows: BV regex, safe_title, stem_for
-    ├── lib/                 the skill's own libraries: srt_to_md / gen_mindmap / pdfbook / pdftext …
-    ├── assets/
-    │   ├── fonts/           bundled NotoSansSC.ttf (+ OFL.txt), keeps PDF Chinese searchable
-    │   └── mindmap-outline-prompt.md  the prompt the agent follows when writing an outline
-    └── references/          "read this before changing that" deep dives (Chinese)
-        ├── subtitle-api.md    only x/player/wbi/v2 works; measurements of the old endpoint's wrong-video bug
-        ├── mp4-integrity.md   why only the pts criterion catches truncation
-        ├── pdf-fonts.md       the Kangxi Radicals trap, and the check to run after swapping fonts
-        └── llm-mindmap.md     who writes the outline, and the timestamp/text format contract
-```
-
-## Read the evals before you change anything
-
-`evals/` holds **six** scenarios for confirming the agent's behavior hasn't regressed after a change to SKILL.md or the scripts:
-
-| Scenario | Guards against |
+| What you want to do | What to install |
 |---|---|
-| `01-routing-download` | download requests routing to the right workflow |
-| `02-routing-digest` | the "download is a prerequisite for digest" misreading; and the artifact being 阅读版, not 可读版 |
-| `03-empty-subtitles` | the three meanings of an empty subtitle list — don't just say "this video has no subtitles" |
-| `04-mp4-integrity` | three of the four intuitive criteria let a truncated file through |
-| `05-mindmap-handoff` | the no-API-key handoff protocol: don't push the user to buy a key, don't hand-roll opml, pass every BV on the final `--build` |
-| `06-source-txt-resume` | when a `.source.txt` already exists, don't regenerate over it (a human may have edited it by hand) |
+| Text / articles / outlines / mindmaps | **nothing at all** |
+| Download videos | [BBDown](https://github.com/nilaoda/BBDown/releases) + ffmpeg (`brew install ffmpeg`) |
+| Emit PDFs | `pip install fpdf2 fonttools` |
+| Fetch subtitles the first time | `pip install segno`, then scan the QR code to log into bilibili (once) |
 
-There's no automated runner. You run one by opening an agent with a clean context, letting it read only `SKILL.md`, handing it the `query` verbatim, and checking the result against `expected_behavior` item by item.
-Run each on at least two different models. Details in [evals/README.md](evals/README.md) (Chinese).
+Python 3.9+. Not sure what's missing? Say "check my setup" and it names the exact install command.
 
-## Privacy
+---
 
-- **`BBDown.data` is equivalent to your bilibili login**, and `.env.local` holds your API key if you configured one. Both are in `.gitignore` — don't commit them, don't share them. `doctor` never echoes any fragment of a key.
-- This skill talks only to bilibili's API. The mindmap step is done by **the agent already in front of you** by default, with no extra network call. It only reaches an LLM endpoint if you configured an API key yourself.
+<details>
+<summary><b>Does it cost money? Does it touch my account?</b></summary>
+
+**No money.** Writing the outline is done by the AI you're already talking to — no extra API call.
+The subscription you already pay for is enough. (If you want unattended batch runs you *can*
+configure an API key, but it's optional.)
+
+**Read-only on your account.** The QR login exists only to fetch subtitles — logged out, bilibili
+pretends the video has none. Your login stays on your own machine and is excluded from version
+control. The skill talks to bilibili and nowhere else, and never likes, comments or tips on your behalf.
+
+</details>
+
+<details>
+<summary><b>What it can't do</b></summary>
+
+- **No official AI subtitles, no article.** It does not transcribe audio — it tells you plainly which episodes it skipped rather than inventing a transcript.
+- **It won't crawl an uploader's entire channel.** It's built for one episode or a handful, not for scraping.
+- **Bilibili only.**
+- **It doesn't fix wording.** The source is bilibili's own AI subtitle track, recognition errors included ("john turner" up there is one). The skill merges and formats; the timestamps are there so you can check.
+
+</details>
+
+<details>
+<summary><b>Three traps it handles for you</b></summary>
+
+- **Bilibili has two subtitle endpoints, and one of them returns a different video's subtitles** — not truncated, wrong video entirely. Query it three times for one video and you get three unrelated transcripts. Plenty of existing tools use exactly that endpoint.
+- **You cannot tell a broken mp4 by its duration**: truncate a file to 60% and it still reports full length, and running it through ffmpeg still exits clean. Only comparing the position of the last frame catches it — so this one verifies after every download and re-fetches anything broken.
+- **Searchable Chinese in a PDF is fragile**: many Chinese fonts map common characters into the obscure Kangxi Radicals block, so the page looks perfect and searches return nothing. This ships a font that was checked.
+
+Measurements are in [references/](skills/digesting-bilibili-videos/references/) (Chinese).
+
+</details>
+
+---
+
+Want to change it, or read the full behavior spec: [SKILL.md](skills/digesting-bilibili-videos/SKILL.md).
+
+The text artifacts in `examples/` are opening excerpts only. Copyright belongs to the original
+creator, [林亦LYi](https://space.bilibili.com/4401694) — watch the full thing
+[on bilibili](https://www.bilibili.com/video/BV1oC5q6BESu) and leave a like.
 
 ## License
 
 Code is MIT (see [LICENSE](LICENSE)).
-
 The bundled `NotoSansSC.ttf` is distributed under the SIL Open Font License 1.1; a copy sits next to the font as `OFL.txt`.
