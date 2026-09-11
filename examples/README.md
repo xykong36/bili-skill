@@ -42,4 +42,4 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1oC5q6BESu \
 
 没配 API key 的话，脚本会在出完字幕和阅读版之后停下来，
 打印一份清单交给你手边的 agent 去写大纲，写完再跑一次同样的命令加 `--build` 收尾。
-详见根目录 [README](../README.md) 的「工作原理」。
+完整规则见 [SKILL.md](../skills/digesting-bilibili-videos/SKILL.md)。
