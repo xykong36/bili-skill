@@ -11,7 +11,7 @@
 """
 import re
 
-from lib import opml_lib as L
+import opml_lib as L
 
 # 标签 -> 主色。显示名就是标签本身，不再另设一列。
 KINDS = {

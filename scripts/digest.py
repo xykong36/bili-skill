@@ -16,12 +16,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-import _paths  # noqa: F401  把 <plugin>/lib 和 <skill> 挂上 sys.path
 import bili_api
 from _common import collect_bvs, fresh, log, safe_title, stem_for
-from lib import opml_lib, pdf_content, skill_config, srt as srtlib
+import opml_lib
+import pdf_content
+import skill_config
+import srt as srtlib
 
-LIB = Path(__file__).resolve().parent.parent / "lib"
+HERE = Path(__file__).resolve().parent
 
 
 # ---------- 1. 字幕 ----------
@@ -79,7 +81,7 @@ def fetch_subtitle(meta, dest):
 
 # ---------- 2. 阅读版 ----------
 def make_readable(srt_path, md_path, title):
-    r = subprocess.run([sys.executable, str(LIB / "srt_to_md.py"), str(srt_path),
+    r = subprocess.run([sys.executable, str(HERE / "srt_to_md.py"), str(srt_path),
                         "-o", str(md_path), "--title", title],
                        stdin=subprocess.DEVNULL, capture_output=True,
                        text=True, timeout=300)
@@ -154,7 +156,7 @@ def make_mindmap(md_path, opml_path, duration, workdir, build=False):
                  else ["--backend", "api", "--model", info["model"]])
 
     r = subprocess.run(
-        [sys.executable, str(LIB / "gen_mindmap.py"), str(infile), prefix,
+        [sys.executable, str(HERE / "gen_mindmap.py"), str(infile), prefix,
          *extra, "--duration", str(int(duration or 0))],
         cwd=workdir, stdin=subprocess.DEVNULL, capture_output=True, text=True,
         timeout=budget, env=skill_config.env_for_backend())
@@ -198,7 +200,7 @@ def make_outline(opml_path, md_path, title, pubdate, duration):
 def make_pdf(entries, out, name):
     """出两本 PDF。fpdf2 只在这一步需要，所以 import 放在函数里。"""
     try:
-        from lib import pdfbook
+        import pdfbook
     except ImportError as e:
         log(f"    ✗ 出 PDF 需要 fpdf2 和 fonttools：pip install fpdf2 fonttools（{e}）")
         return False

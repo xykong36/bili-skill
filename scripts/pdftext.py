@@ -14,7 +14,7 @@ from pathlib import Path
 from fpdf import FPDF
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from lib import skill_config
+import skill_config
 
 # pdftext 在 <skill>/lib/ 下，assets 即 <skill>/assets
 ASSETS = Path(__file__).resolve().parent.parent / "assets"

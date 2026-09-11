@@ -18,9 +18,9 @@ from pathlib import Path
 from fpdf import FPDF
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from lib import opml_lib as L
-from lib import pdf_content as O
-from lib import pdftext as T
+import opml_lib as L
+import pdf_content as O
+import pdftext as T
 
 
 # ---------- 原片链接 ----------
