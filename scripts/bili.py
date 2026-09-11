@@ -25,7 +25,6 @@ import argparse
 import sys
 from pathlib import Path
 
-import _paths  # noqa: F401  把 <plugin>/lib 和 <skill> 挂上 sys.path
 
 import digest
 import download

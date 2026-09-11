@@ -18,7 +18,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-import _paths  # noqa: F401  只为把共享 lib 挂上 sys.path
 import bili_api
 from _common import collect_bvs, fresh, log, stem_for
 

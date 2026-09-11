@@ -18,9 +18,8 @@ import os
 import shutil
 import sys
 
-import _paths  # noqa: F401
 import bili_api
-from lib import skill_config
+import skill_config
 
 # 一个公开的、确认有官方中文 AI 字幕的视频。它哪天可能被删或撤字幕，
 # 那时换成任意一个你确认有 AI 字幕的公开 BV 即可（--canary 或 BILI_CANARY）。
@@ -165,7 +164,7 @@ def run(canary=None):
             soft(mod, f"未安装（{why}）", f"{fix}，或加 --skip-pdf")
 
     try:
-        from lib import pdftext
+        import pdftext
         if pdftext.VAR_FONT.is_file():
             ok_("中文字体", str(pdftext.VAR_FONT))
         else:

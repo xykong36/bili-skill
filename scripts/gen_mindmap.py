@@ -41,7 +41,7 @@ from xml.sax.saxutils import escape
 # 这个文件既被 digest 当子进程拉起，也支持单独跑，所以自己把 <skill> 挂上
 # sys.path（和 pdftext.py 同一套做法）。
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from lib import skill_config
+import skill_config
 
 INDENT = 2  # 大纲每级缩进空格数
 NEAR_PARENT_SEC = 600  # 补小时位后允许离父节点多远(秒)，见 repair_timestamps
