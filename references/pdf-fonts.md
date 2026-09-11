@@ -14,7 +14,7 @@
 
 很多中文字体能**正常显示**，但会把常用字映射到**康熙部首区**（U+2F00–2FDF）。字形渲染是对的，肉眼完全看不出问题——但 PDF 内搜索和复制会失效，因为文本层里存的是部首码位，不是汉字码位。
 
-选定 Noto Sans SC 就是为这个。`BILI_SKILLS_FONT` 可以换，但换完必须验。
+选定 Noto Sans SC 就是为这个。`BILI_SKILL_FONT` 可以换，但换完必须验。
 
 ## 换字体后必须跑的验证命令
 
@@ -35,7 +35,7 @@ macOS 的 `PingFang.ttc` 和 `Hiragino Sans GB.ttc` 是 PostScript(CFF) 轮廓�
 
 ## 变量字体要先定格成静态 TTF
 
-fpdf2 吃静态最稳。`pdftext.instance()` 用 fontTools 定格到 400/700 两个字重，缓存在 `~/.cache/bili-skills/fonts/`（`BILI_SKILLS_CACHE` 可改），只算一次。
+fpdf2 吃静态最稳。`pdftext.instance()` 用 fontTools 定格到 400/700 两个字重，缓存在 `~/.cache/bili-skill/fonts/`（`BILI_SKILL_CACHE` 可改），只算一次。
 
 ## 缺一个字形就能毁掉整本
 

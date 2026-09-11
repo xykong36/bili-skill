@@ -1,17 +1,17 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "bili-skills",
+  "name": "bili-skill",
   "description": "Skills for archiving and digesting bilibili videos",
   "owner": {
     "name": "xiangyu"
   },
   "plugins": [
     {
-      "name": "bili-skills",
+      "name": "bili-skill",
       "description": "Download bilibili videos and turn their official AI subtitles into readable transcripts, OPML mindmaps, outlines and searchable Chinese PDFs",
       "author": { "name": "xiangyu" },
       "category": "development",
-      "homepage": "https://github.com/xykong36/bili-skills",
+      "homepage": "https://github.com/xykong36/bili-skill",
       "source": "./"
     }
   ]

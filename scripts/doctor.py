@@ -171,7 +171,7 @@ def run(canary=None):
             # 字体是随 skill 自带的，缺了说明装歪了。--skip-pdf 能绕过，
             # 所以是 ! 不是 ✗ —— 但必须报出来，之前这行的结果是被丢掉的。
             soft("中文字体", f"缺失：{pdftext.VAR_FONT}",
-                 "重装这个 skill，或设 BILI_SKILLS_FONT 指向一个中文 TTF，"
+                 "重装这个 skill，或设 BILI_SKILL_FONT 指向一个中文 TTF，"
                  "或加 --skip-pdf")
     except ImportError:
         skipped("中文字体", "跳过（fpdf/fontTools 没装，查不了）")
