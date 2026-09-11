@@ -26,54 +26,65 @@ They share one bilibili API wrapper and one BBDown login state — log in once, 
 
 ## What it looks like
 
-What bilibili hands you is the official AI subtitle track — chopped every two seconds, no punctuation, unreadable:
+That row of "watch later" bookmarks — we both know you're not going back to them.
+
+And the ones you did finish leave nothing behind: to quote a single line you scrub the
+timeline three times over; to check whether it covered some point you rewatch the whole
+thing; the screenshots you took pile up in an album where not one word is searchable.
+**Video is the densest medium we have, and the least searchable.**
+
+One BV id, one command. Below is everything a 14-minute episode leaves behind.
+
+### 143 points, typeset, clickable and searchable
+
+<img src="examples/previews/outline-page.png" width="620" alt="Outline PDF">
+
+The episode is split into 13 sections and 143 points, color-coded by six tags —
+`观点` claim, `数据` data, `案例` example, `金句` quote, `做法` method, `交锋` tension.
+Every timestamp is live: click it and you land on that second of the original video.
+
+### The whole episode on one page
+
+<img src="examples/previews/mindmap-full.png" width="420" alt="Mindmap PDF, full page">
+
+The page sizes itself to the content — nothing is cut, nothing is cramped. Zoomed in:
+
+<img src="examples/previews/mindmap-detail.png" width="720" alt="Mindmap PDF, detail">
+
+Vector typesetting, so it stays sharp at any zoom, and the Chinese text inside the PDF
+is selectable and searchable.
+
+### Underneath it all, a transcript you can actually read
+
+The official AI subtitles arrive like this — chopped every two seconds, no punctuation:
 
 ```srt
 1
-00:00:00,040 --> 00:00:02,320
-我最近刷到有博主说没背景
+00:00:00,240 --> 00:00:01,760
+苹果刚过完50岁生日
 
 2
-00:00:02,320 --> 00:00:03,680
-没资源的普通人
+00:00:01,760 --> 00:00:02,720
+库克就下车了
 ```
 
-What comes out is the 阅读版 ("reading edition") — fragments merged into real paragraphs, each keeping one seekable timestamp:
+And come out like this, merged into real paragraphs, each keeping one seekable timestamp:
 
 ```markdown
-# 赚钱信息差，不会出现在网上
+# 苹果新CEO凭啥是他？
 
-> 全文时长约 15:12 · 共 38 段 · 时间戳为该段起始位置
+> 全文时长约 13:59 · 共 43 段 · 时间戳为该段起始位置
 
----
-
-**`[00:00]`** 我最近刷到有博主说没背景没资源的普通人想赚到钱就要提高获取信息差的能力
-
-**`[00:10]`** 知识星球平台还有一些资讯账号等等的渠道那我作为一个创过业并且有多年副业和搞钱经验的人首先这些确实是获取信息差的渠道…
+**`[00:00]`** 苹果刚过完50岁生日库克就下车了新上任的苹果CEO呢名字叫john turner
+约翰特努斯他还是马斯克的宾大同届校友说到宾大呢哇那他的优秀毕业生可就太多了…
 ```
 
-Same 15-minute episode: 29 KB of subtitle shards → a 14 KB, 38-paragraph read.
-Downstream of that you also get an OPML mindmap, a content outline, and two searchable Chinese PDFs covering the whole batch.
+29 KB of subtitle shards → a 15 KB, 43-paragraph read.
 
-On the download side, the metadata looks like this (the counts are a snapshot from when it was fetched):
-
-```json
-{
-  "bvid": "BV1xxxxxxxxxx",
-  "aid": 115089587902032,
-  "cid": 31937398244,
-  "title": "赚钱信息差，不会出现在网上",
-  "pubdate": 1756127858,
-  "duration": 913,
-  "view": 508251,
-  "like": 17981,
-  "comment_count": 1080,
-  "owner": "边大娘FM",
-  "owner_mid": 1900638792,
-  "desc": "",
-  "url": "https://www.bilibili.com/video/BV1xxxxxxxxxx"
-}
-```
+> **[`examples/` holds the real files from this run](examples/)** — srt, reading edition,
+> OPML, outline, metadata. Click and look; nothing to install. The sample is
+> [《苹果新CEO凭啥是他？》](https://www.bilibili.com/video/BV1oC5q6BESu) by 林亦LYi;
+> the text artifacts are opening excerpts only and the content belongs to its author.
 
 ## Install
 
@@ -255,6 +266,7 @@ If you're already on yt-dlp and happy, don't switch — but the "how to tell a f
 ```
 bili-skills/
 ├── .claude-plugin/          plugin + marketplace manifests
+├── examples/                real output from one episode — click and look
 ├── lib/                     plugin-level shared library, used by both workflows
 │   ├── bili_api.py          thin bilibili API wrapper: metadata + subtitle list; stdlib and curl only
 │   └── bili_login.py        QR login → writes the BBDown.data that BBDown itself accepts
