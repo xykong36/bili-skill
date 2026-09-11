@@ -127,8 +127,7 @@ Run several episodes together and they share one mindmap book and one outline bo
 in seconds and cost you no disk. Pass several links at once for a batch; finished work is
 recognized and skipped, so an interrupted run just picks up where it stopped.
 
-<details>
-<summary>What the files look like</summary>
+### What the files look like
 
 ```
 科技合集/
@@ -164,8 +163,6 @@ The real `info.json`:
 
 The day the video goes down, the title and the numbers from the day you saved it are still yours.
 
-</details>
-
 ---
 
 ## Install
@@ -197,8 +194,7 @@ Python 3.9+. Not sure what's missing? Say "check my setup" and it names the exac
 
 ---
 
-<details>
-<summary><b>Does it cost money? Does it touch my account?</b></summary>
+## Does it cost money? Does it touch my account?
 
 **No money.** Writing the outline is done by the AI you're already talking to — no extra API call.
 The subscription you already pay for is enough. (If you want unattended batch runs you *can*
@@ -208,32 +204,19 @@ configure an API key, but it's optional.)
 pretends the video has none. Your login stays on your own machine and is excluded from version
 control. The skill talks to bilibili and nowhere else, and never likes, comments or tips on your behalf.
 
-</details>
+---
 
-<details>
-<summary><b>What it can't do</b></summary>
+## What it can't do
 
 - **No official AI subtitles, no article.** It does not transcribe audio — it tells you plainly which episodes it skipped rather than inventing a transcript.
 - **It won't crawl an uploader's entire channel.** It's built for one episode or a handful, not for scraping.
 - **Bilibili only.**
 - **It doesn't fix wording.** The source is bilibili's own AI subtitle track, recognition errors included ("john turner" up there is one). The skill merges and formats; the timestamps are there so you can check.
 
-</details>
-
-<details>
-<summary><b>Three traps it handles for you</b></summary>
-
-- **Bilibili has two subtitle endpoints, and one of them returns a different video's subtitles** — not truncated, wrong video entirely. Query it three times for one video and you get three unrelated transcripts. Plenty of existing tools use exactly that endpoint.
-- **You cannot tell a broken mp4 by its duration**: truncate a file to 60% and it still reports full length, and running it through ffmpeg still exits clean. Only comparing the position of the last frame catches it — so this one verifies after every download and re-fetches anything broken.
-- **Searchable Chinese in a PDF is fragile**: many Chinese fonts map common characters into the obscure Kangxi Radicals block, so the page looks perfect and searches return nothing. This ships a font that was checked.
-
-Measurements are in [references/](skills/digesting-bilibili-videos/references/) (Chinese).
-
-</details>
-
 ---
 
-Want to change it, or read the full behavior spec: [SKILL.md](skills/digesting-bilibili-videos/SKILL.md).
+Want to change it, or read the full behavior spec: [SKILL.md](skills/digesting-bilibili-videos/SKILL.md)
+and [references/](skills/digesting-bilibili-videos/references/) (Chinese).
 
 The text artifacts in `examples/` are opening excerpts only. Copyright belongs to the original
 creator, [林亦LYi](https://space.bilibili.com/4401694) — watch the full thing
