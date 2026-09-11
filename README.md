@@ -24,6 +24,17 @@
 
 ---
 
+## 如何安装
+
+把这句话发给你的 AI——
+
+> 帮我把 https://github.com/xykong36/bili-skill 装成 skill
+
+装完直接说话，不用配置。
+
+
+---
+
 ## 一期视频进去，出来这么一条链
 
 样本：[《苹果新CEO凭啥是他？》](https://www.bilibili.com/video/BV1oC5q6BESu) ·
@@ -130,37 +141,6 @@ B 站给的是这个，给播放器打轴用的，两秒一断、没标点：
 ├── 科技合集-mindmap.pdf                                    整批合一本
 └── 科技合集-outline.pdf                                    整批合一本
 ```
-
-文件名带日期和标题，三个月后翻文件夹也认得出是哪期。
-
-`info.json` 的真实内容：
-
-```json
-{
-  "bvid": "BV1oC5q6BESu",
-  "title": "苹果新CEO凭啥是他？",
-  "owner": "林亦LYi",
-  "duration": 849,
-  "view": 1050422,
-  "like": 26260,
-  "desc": "特努斯是谁？他会带苹果走向何方？",
-  "url": "https://www.bilibili.com/video/BV1oC5q6BESu"
-}
-```
-
-视频哪天下架了，标题和你存它那天的数据还在你手上。
-
----
-
-## 装
-
-把这句话发给你的 AI——
-
-> 帮我把 https://github.com/xykong36/bili-skill 装成 skill
-
-装完直接说话，不用配置。
-
----
 
 ## 需要准备什么
 
