@@ -1,7 +1,6 @@
 ---
 name: digesting-bilibili-videos
 description: Downloads bilibili videos and turns their official AI subtitles into readable transcripts, OPML mindmaps, outlines and searchable Chinese PDFs. Use when downloading, saving or archiving a B站/BV号/哔哩哔哩 video locally, grabbing its cover image or metadata, getting a video's subtitles or transcript, turning an episode into a readable article, mindmap, outline or PDF, when a downloaded mp4 turns out corrupt, truncated, silent or fails with "moov atom not found", or when B站 subtitle requests come back empty or return the wrong video's text
-allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py *), Read
 ---
 
 # B 站视频：存下来，或者嚼成能读的东西
@@ -9,7 +8,7 @@ allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py *), Read
 先跑一次自检，它会告诉你缺什么、装什么命令：
 
 ```bash
-python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor
+python3 <skill-dir>/scripts/bili.py doctor
 ```
 
 ## 走哪条工作流
@@ -19,13 +18,17 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor
 
 | 用户想要 | 走 | 命令 |
 |---|---|---|
-| 本地存一份视频 / 封面 / 播放量 | 下载 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py download BV1xxx --out ./out` |
-| 字幕、逐字稿、文章、脑图、大纲、PDF | 嚼 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1xxx --out ./out --name 合集名` |
-| 两个都要 | 一条命令 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1xxx --out ./out --with-video` |
+| 本地存一份视频 / 封面 / 播放量 | 下载 | `python3 <skill-dir>/scripts/bili.py download BV1xxx --out ./out` |
+| 字幕、逐字稿、文章、脑图、大纲、PDF | 嚼 | `python3 <skill-dir>/scripts/bili.py digest BV1xxx --out ./out --name 合集名` |
+| 两个都要 | 一条命令 | `python3 <skill-dir>/scripts/bili.py digest BV1xxx --out ./out --with-video` |
 
-上面的命令是完整形式，**照抄，别简写成 `bili.py ...` 或 `scripts/bili.py ...`**。
-两个理由：Bash 工具的工作目录是用户的项目目录、不是 skill 目录，相对路径会找不到文件；
-而 frontmatter 里 `allowed-tools` 的规则匹配的正是这个完整形式，简写会多一次权限弹窗。
+命令里的 `<skill-dir>` 换成**本 SKILL.md 所在目录的绝对路径**——你就是从那儿读到这个
+文件的。不确定就跑一次上面那条 `doctor`，它第一行会把完整入口路径原样打出来，照抄即可。
+
+**别简写成 `bili.py ...` 或 `scripts/bili.py ...`**：shell 的工作目录是用户的项目目录、
+不是 skill 目录，相对路径会找不到文件。**也别为此先 `cd` 过去**——`--out ./out` 和
+`.env.local` 的查找都以工作目录为准，cd 了两个都会歪，而且后者是静默的：配了 API key
+也会被当成没配，直接走交接模式。
 
 ## 不适用
 
@@ -39,13 +42,13 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor
 
 | 想干的事 | 命令 |
 |---|---|
-| 下一期 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py download BV1xxx --out ./out` |
-| 下几期 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py download BV1xxx BV2yyy --out ./out` |
-| 直接粘链接（**记得加引号**，`?`/`&` 会被 shell 吃掉） | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py download "https://www.bilibili.com/video/BV1xxx?p=1" --out ./out` |
+| 下一期 | `python3 <skill-dir>/scripts/bili.py download BV1xxx --out ./out` |
+| 下几期 | `python3 <skill-dir>/scripts/bili.py download BV1xxx BV2yyy --out ./out` |
+| 直接粘链接（**记得加引号**，`?`/`&` 会被 shell 吃掉） | `python3 <skill-dir>/scripts/bili.py download "https://www.bilibili.com/video/BV1xxx?p=1" --out ./out` |
 | 不限体积（默认上限 800MB，超了只出封面+info） | `--max-mb 0` |
 | 只要封面和元信息，不下正片 | `--no-video` |
 | 文件名带日期和标题 | `--stem-title` |
-| 选项可以随便叠 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py download BV1xxx --out /tmp/x --no-video --stem-title` |
+| 选项可以随便叠 | `python3 <skill-dir>/scripts/bili.py download BV1xxx --out /tmp/x --no-video --stem-title` |
 
 重跑是幂等的：已存在且校验通过的产物会跳过，坏的会被删掉重下。
 
@@ -97,11 +100,11 @@ B 站限流时接口**返回空结果，不报错**。所以「查不到这个�
 
 | 想干的事 | 命令 |
 |---|---|
-| 几期打成一本 | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1 BV2 BV3 --out ./out --name 合集名` |
+| 几期打成一本 | `python3 <skill-dir>/scripts/bili.py digest BV1 BV2 BV3 --out ./out --name 合集名` |
 | 大纲写完了，收尾出脑图/大纲/PDF | 同一条 digest 命令加 `--build`（BV 一个都不能少） |
 | 只要字幕和阅读版 | `--skip-mindmap` |
 | 不要 PDF | `--skip-pdf` |
-| 已经有 srt 了（给了 `--srt` 就**忽略** BV 号，两者不叠加） | `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest --srt a.srt --title 标题 --out ./out` |
+| 已经有 srt 了（给了 `--srt` 就**忽略** BV 号，两者不叠加） | `python3 <skill-dir>/scripts/bili.py digest --srt a.srt --title 标题 --out ./out` |
 
 ## 抓字幕：只能走 `wbi/v2`
 
@@ -121,7 +124,7 @@ B 站限流时接口**返回空结果，不报错**。所以「查不到这个�
 2. **没登录 / cookie 过期**
 3. 被限流
 
-**别直接报告「这个视频没有字幕」。** `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor` 会**自动**拿一个内置的、已知有官方字幕的 canary 视频探一次，以此区分（换一个用 `--canary BV...` 或 `BILI_CANARY` 环境变量）：canary 也拿不到 = 是你的登录态或限流问题，不是视频的问题。
+**别直接报告「这个视频没有字幕」。** `python3 <skill-dir>/scripts/bili.py doctor` 会**自动**拿一个内置的、已知有官方字幕的 canary 视频探一次，以此区分（换一个用 `--canary BV...` 或 `BILI_CANARY` 环境变量）：canary 也拿不到 = 是你的登录态或限流问题，不是视频的问题。
 
 脚本这边：抓不到字幕的那一期算失败、**跳过后面四步**，但**不中断整批**——
 剩下的 BV 照常处理，结尾的「完成 N/M 期」会把它计进去。所以一批里少了几期
@@ -159,11 +162,11 @@ B 站限流时接口**返回空结果，不报错**。所以「查不到这个�
 看到 `⏸` 就按这个做。**别只看退出码**——`--with-video` 下退出码可能被下载那侧掩掉。
 
 ```
-① python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1 BV2 --out ./out --name 合集名
+① python3 <skill-dir>/scripts/bili.py digest BV1 BV2 --out ./out --name 合集名
      出字幕和阅读版，然后打印一份带绝对路径的清单：每期读哪个、写到哪
 ② 你自己干：读 assets/mindmap-outline-prompt.md，按它把每期的「阅读版」
      整理成缩进式大纲，写进清单给的 <stem>.source.txt        （这步不跑脚本）
-③ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1 BV2 --out ./out --name 合集名 --build
+③ python3 <skill-dir>/scripts/bili.py digest BV1 BV2 --out ./out --name 合集名 --build
      读 .source.txt → 脑图 → 大纲 → 两本 PDF
 ```
 
@@ -206,7 +209,7 @@ B 站限流时接口**返回空结果，不报错**。所以「查不到这个�
 
 ```bash
 pip install segno                                  # 一次性，纯 Python 零依赖
-python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py login       # --force 换账号 / 刷新过期登录态
+python3 <skill-dir>/scripts/bili.py login       # --force 换账号 / 刷新过期登录态
 ```
 
 它给你**一个二维码 PNG 的绝对路径**和**一块文本二维码**，用手机 B 站 App 扫，扫完自动写出 `BBDown.data`（和 BBDown 自己写的格式完全一样，两边通用）。默认等 180 秒（正好是二维码有效期），超时就重跑。`--qr png` 只要图片，`--qr-out` 指定 PNG 落点。
@@ -229,7 +232,7 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py login       # --force 换账号 / �
 | 要什么 | 哪条工作流用 | 怎么装 |
 |---|---|---|
 | curl | 两条都要 | 系统自带 |
-| `BBDown.data` 登录态 | 两条都要（下载没它只能拿低清流；字幕没它只返回空列表） | `pip install segno` 后跑 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py login` 扫码 |
+| `BBDown.data` 登录态 | 两条都要（下载没它只能拿低清流；字幕没它只返回空列表） | `pip install segno` 后跑 `python3 <skill-dir>/scripts/bili.py login` 扫码 |
 | BBDown | 下载 | https://github.com/nilaoda/BBDown/releases 放进 PATH |
 | ffmpeg / ffprobe | 下载（完整性校验） | `brew install ffmpeg` |
 | 一个 OpenAI 兼容 API key | 嚼第 3 步，**可选** | 不配就由当前 agent 自己写（默认）。想无人值守：`echo 'DEEPSEEK_API_KEY=sk-...' >> .env.local` |
@@ -238,7 +241,7 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py login       # --force 换账号 / �
 
 下载、抓字幕、阅读版，以及交接模式下的整条嚼链路，都是**纯标准库**的——不配 key 也不装额外依赖就能跑到大纲。
 
-**Python 3.9+**（已在 3.9 和 3.12 上实测跑通全链路）。注意：**agent 沙箱里的 `python3` 可能跟你交互式终端里的不是同一个**（pyenv/conda 的 shims 靠 shell 启动脚本注入 PATH，沙箱常起裸 shell）。依赖要装在**跑脚本的那个 python** 里；不确定就先跑 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor`，它报什么缺什么就是那个 python 的实情。
+**Python 3.9+**（已在 3.9 和 3.12 上实测跑通全链路）。注意：**agent 沙箱里的 `python3` 可能跟你交互式终端里的不是同一个**（pyenv/conda 的 shims 靠 shell 启动脚本注入 PATH，沙箱常起裸 shell）。依赖要装在**跑脚本的那个 python** 里；不确定就先跑 `python3 <skill-dir>/scripts/bili.py doctor`，它报什么缺什么就是那个 python 的实情。
 
 # 产物
 
@@ -288,9 +291,9 @@ out/
 | 下下来没有声音 | 音视频没合流完。`verify_mp4` 会拦住并删掉 |
 | 播到一半就断 | 截断的文件。只有 pts 覆盖判据看得出来 |
 | 「查不到视频信息」 | BV 写错 / 视频被删 / **被限流**（限流是静默的） |
-| 清晰度很低 | 没登录。跑 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py login` |
+| 清晰度很低 | 没登录。跑 `python3 <skill-dir>/scripts/bili.py login` |
 | 探不到体积 | BBDown 输出格式变了，正则失配。会退化成不限体积照常下载，不会静默跳过 |
-| 字幕列表为空 | 见「三种含义」，先跑 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor` |
+| 字幕列表为空 | 见「三种含义」，先跑 `python3 <skill-dir>/scripts/bili.py doctor` |
 | 字幕内容跟视频完全不相干 | 走到老接口了。只能用 `wbi/v2` |
 | 报「判定串号，已丢弃」 | 上限校验生效，字幕不是这个视频的 |
 | 没配 API key 又没加 `--skip-mindmap` | **不是错误**。前置检查后走交接：本轮出字幕和阅读版，大纲你写，再 `--build` 收尾 |

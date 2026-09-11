@@ -35,8 +35,10 @@ UP 主 [林亦LYi](https://space.bilibili.com/4401694) · 14:09 · BV1oC5q6BESu
 
 ## 自己跑一遍
 
+把 `<skill-dir>` 换成 skill 装在哪（SKILL.md 所在目录的绝对路径）：
+
 ```bash
-python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py digest BV1oC5q6BESu \
+python3 <skill-dir>/scripts/bili.py digest BV1oC5q6BESu \
   --out ./out --name 苹果新CEO凭啥是他 --with-video
 ```
 

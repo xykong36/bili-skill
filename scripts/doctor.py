@@ -17,6 +17,7 @@
 import os
 import shutil
 import sys
+from pathlib import Path
 
 import bili_api
 import skill_config
@@ -27,7 +28,11 @@ DEFAULT_CANARY = os.environ.get("BILI_CANARY", "BV1zsXbBVE5d")
 
 DOWNLOAD, DIGEST = 1, 2
 
-LOGIN_FIX = "跑 `python3 scripts/bili.py login` 扫码登录"
+# 修复建议一律给**绝对路径**：跑这个 skill 的 agent 的工作目录是用户的项目目录，
+# 不是 skill 目录，相对路径它照抄过去就找不到文件。
+ENTRY = Path(__file__).resolve().parent / "bili.py"
+
+LOGIN_FIX = f"跑 `python3 {ENTRY} login` 扫码登录"
 
 
 def _row(mark, name, detail, fix=""):
@@ -58,6 +63,11 @@ def run(canary=None):
     canary = canary or DEFAULT_CANARY
     skill_config.load_dotenv()
     blocked = 0
+
+    # 第一行就把入口钉死：SKILL.md 里的 <skill-dir> 是个占位符，让脚本自己
+    # 报一次绝对路径，比让 agent 去猜自己装在哪可靠。
+    print(f"入口 python3 {ENTRY}")
+    print(f"     SKILL.md 里的 <skill-dir> = {ENTRY.parent.parent}\n")
 
     # ---------------- 共用 ----------------
     print("共用")
@@ -125,7 +135,7 @@ def run(canary=None):
             hard("字幕接口",
                  f"canary 也拿不到中文字幕（返回 {len(subs)} 条其它语言）",
                  "这说明不是「某个视频恰好没字幕」，而是 cookie 失效或被限流。"
-                 "先 `bili.py login --force`；还不行就等一会儿再试")
+                 f"先 `python3 {ENTRY} login --force`；还不行就等一会儿再试")
             blocked |= DIGEST
 
     # 没配 key 必须报 ✓ 而不是 !。「!」的语义是「缺了少功能」，可这里没 key 是一个
