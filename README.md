@@ -1,15 +1,20 @@
 # bili-skills
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-8A63D2)](https://docs.claude.com/en/docs/claude-code/plugins)
-[![Agent Skill](https://img.shields.io/badge/Agent%20Skill-digesting--bilibili--videos-0A9EDC)](skills/digesting-bilibili-videos/SKILL.md)
+[![Agent Skills](https://img.shields.io/badge/Agent%20Skills-open%20protocol-0A9EDC)](https://docs.claude.com/en/docs/claude-code/skills)
+[![Runtimes](https://img.shields.io/badge/runtimes-50%2B-8A63D2)](#安装)
+[![Skill](https://img.shields.io/badge/skill-digesting--bilibili--videos-555)](skills/digesting-bilibili-videos/SKILL.md)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB)](#先决条件)
 
 **中文** | [English](README.en.md)
 
 > 一个 BV 号进去，一份能读、能搜、能存的东西出来。
 
-一个 Claude Code skill，把 B 站视频变成能存能读的东西。两条并列的工作流：
+一个 **Agent Skill**，把 B 站视频变成能存能读的东西。
+基于开放的 Agent Skills 协议，可在 Claude Code、Codex、Cursor、OpenClaw、Hermes Agent、
+CodeBuddy、Workbuddy、Gemini CLI、OpenCode 等 **50+ 兼容 runtime** 中运行。
+
+两条并列的工作流：
 
 - **下载** — BV 号 → 正片 mp4 + 封面 + 元信息，带一套真能发现坏文件的完整性校验。
 - **嚼** — BV 号 → 官方 AI 字幕 → 阅读版 → 思维导图 OPML → 内容大纲 → 两本可搜索的中文 PDF。
@@ -73,15 +78,23 @@
 
 ## 安装
 
+**Claude Code**（插件市场）：
+
 ```
 /plugin marketplace add xykong36/bili-skills
 /plugin install bili-skills
 ```
 
-装完在 Claude Code 里直接说「帮我把这个 B 站视频下下来」或「把这期整理成脑图」就会自动用上。
+**其它 runtime**（Codex / Cursor / OpenClaw / Hermes Agent / CodeBuddy / Workbuddy / Gemini CLI / OpenCode …）：
+把 `skills/digesting-bilibili-videos/` 拷进那个 runtime 的 skills 目录（Claude Code 是 `~/.claude/skills/`，各家路径不同），
+再把仓库根的 `lib/` 里的文件拷进**这个 skill 自己的 `lib/`**（文件名不冲突）。
+注意不是拷到 skills 目录下的 `lib/` —— 那样 `_paths.py` 找不到 `bili_api.py` 会直接退出。
 
-也可以手动：把 `skills/digesting-bilibili-videos/` 拷进 `~/.claude/skills/`，再把仓库根的 `lib/` 里的文件拷进**这个 skill 自己的 `lib/`**（文件名不冲突）。
-注意不是拷到 `~/.claude/skills/lib/` —— 那样 `_paths.py` 找不到 `bili_api.py` 会直接退出。
+装完直接说「帮我把这个 B 站视频下下来」或「把这期整理成脑图」就会自动用上。
+
+> 唯一一处 runtime 差异：SKILL.md 里的命令写成 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py ...`，
+> 而 `${CLAUDE_SKILL_DIR}` 是 Claude Code 的占位符，别的 runtime 不展开它——
+> 那边直接用 skill 的实际路径跑同一个脚本即可。脚本本身只用 Python 标准库，跟 runtime 无关。
 
 ## 它产出什么
 
@@ -121,8 +134,9 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor
 | 字幕、逐字稿、文章、脑图、大纲、PDF | 嚼 | `bili.py digest BV1xxx --out ./out --name 合集名` |
 | 两个都要 | 一条命令 | `bili.py digest BV1xxx --out ./out --with-video` |
 
-（表里为了好读省成了 `bili.py`，实际得写全 `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py ...`——
-`allowed-tools` 那条规则匹配的就是这个完整形式，写短了会多弹一次权限窗。）
+（表里为了好读省成了 `bili.py`，实际得写全路径。Claude Code 下是
+`python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py ...`——`allowed-tools` 那条规则匹配的就是这个
+完整形式，写短了会多弹一次权限窗；不展开这个变量的 runtime 就填 skill 的实际路径。）
 
 嚼分五步，每步都幂等，重跑不会白干：
 
