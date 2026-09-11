@@ -167,14 +167,7 @@ The day the video goes down, the title and the numbers from the day you saved it
 
 ## Install
 
-**Claude Code**:
-
-```
-/plugin marketplace add xykong36/bili-skill
-/plugin install bili-skill
-```
-
-**Any other tool** (Cursor, Codex, Gemini CLI…): send your AI this line —
+Send your AI this line —
 
 > Install https://github.com/xykong36/bili-skill as a skill for me
 

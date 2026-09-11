@@ -154,14 +154,7 @@ B 站给的是这个，给播放器打轴用的，两秒一断、没标点：
 
 ## 装
 
-**Claude Code**：
-
-```
-/plugin marketplace add xykong36/bili-skill
-/plugin install bili-skill
-```
-
-**别的工具**（Cursor、Codex、Gemini CLI…）：把这句话发给你的 AI——
+把这句话发给你的 AI——
 
 > 帮我把 https://github.com/xykong36/bili-skill 装成 skill
 
