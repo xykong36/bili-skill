@@ -18,8 +18,9 @@ digest 退出码：0 全成 / 1 有东西坏了 / 2 有几期在等 agent 写大
 两条工作流**并列，不是流水线**：字幕直接走接口拿、全程不碰 mp4，
 所以想要文字不必先下视频。--with-video 只是把两条各跑一遍。
 
-只有一个入口，是为了让 SKILL.md 的 allowed-tools 只需要一条规则：
-    Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py *)
+只有一个入口，是为了让 SKILL.md 只需要交代一个路径：
+    python3 <skill-dir>/scripts/bili.py
+其中 <skill-dir> 是 SKILL.md 所在目录的绝对路径。`doctor` 会把它原样打出来。
 """
 import argparse
 import sys

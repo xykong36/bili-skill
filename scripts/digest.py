@@ -312,12 +312,33 @@ def digest_local_srt(srt_path, out, title, duration, skip_mindmap, build=False):
 BAR = "═" * 68
 
 
-def print_handoff(pendings):
+def _is_out_flag(tok):
+    """argparse 认前缀缩写，所以 --out 也可能写成 --ou / --o。"""
+    return len(tok) >= 3 and tok.startswith("--") and "--out".startswith(tok)
+
+
+def print_handoff(pendings, out):
     """把「该写哪些文件」讲清楚。读者是跑这个 skill 的 agent，不是人。"""
     # 原样重建这次的命令并补上 --build。已经带了就别再加一次。
-    argv = [a for a in sys.argv[1:] if a != "--build"]
+    #
+    # 但 --out 要换成**绝对**路径，不能逐字照抄：原来多半是 `--out ./out`，
+    # 只在收尾那次的工作目录跟这次相同时才指向同一个地方。不同就是一次静默
+    # 失败 —— --build 在空目录里找不到 .source.txt，把这些期重新算成「待写」，
+    # agent 于是被要求再写一遍，而它刚写完的那份正好好躺在原来那个 out 里。
+    # --out 有默认值（"."），可能压根没出现在 argv 里，所以是「剔掉再补」而不是「替换」。
+    argv, skip = [], False
+    for a in sys.argv[1:]:
+        if skip:                      # 上一个 token 是 `--out`，这个是它的值
+            skip = False
+            continue
+        if a == "--build":
+            continue
+        if _is_out_flag(a.split("=", 1)[0]):
+            skip = "=" not in a
+            continue
+        argv.append(a)
     cmd = shlex.join([sys.executable, str(Path(sys.argv[0]).resolve()),
-                      *argv, "--build"])
+                      *argv, "--out", str(out), "--build"])
     log("\n" + BAR)
     log(f"⏸ 字幕和阅读版好了。脑图这步交给你（正在跑这个 skill 的 agent）—— 共 {len(pendings)} 期。")
     log("")
@@ -401,7 +422,7 @@ def run(targets, out, name="B站合集", skip_mindmap=False, skip_pdf=False,
                 entries.append(payload)
 
     if pendings:
-        print_handoff(pendings)
+        print_handoff(pendings, out)
 
     if entries and not skip_pdf and not skip_mindmap:
         if pendings:
