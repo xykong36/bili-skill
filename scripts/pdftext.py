@@ -18,9 +18,9 @@ import skill_config
 
 # pdftext 在 <skill>/lib/ 下，assets 即 <skill>/assets
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
-# BILI_SKILLS_FONT 可换成任意 CJK 变量/静态字体，但换完务必按 SKILL.md
+# BILI_SKILL_FONT 可换成任意 CJK 变量/静态字体，但换完务必按 SKILL.md
 # 「PDF 中文必须可搜索」那节验一遍 ToUnicode 映射。
-VAR_FONT = Path(os.environ.get("BILI_SKILLS_FONT",
+VAR_FONT = Path(os.environ.get("BILI_SKILL_FONT",
                                ASSETS / "fonts" / "NotoSansSC.ttf"))
 FONT_DIR = skill_config.CACHE / "fonts"   # 静态实例的落盘位置，不进仓库
 

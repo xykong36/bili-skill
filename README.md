@@ -1,4 +1,4 @@
-# bili-skills
+# bili-skill
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-open%20protocol-0A9EDC)](https://docs.claude.com/en/docs/claude-code/skills)
@@ -155,8 +155,8 @@ B 站给的是这个，给播放器打轴用的，两秒一断、没标点：
 ## 装
 
 ```
-/plugin marketplace add xykong36/bili-skills
-/plugin install bili-skills
+/plugin marketplace add xykong36/bili-skill
+/plugin install bili-skill
 ```
 
 不用 Claude Code？把 `skills/digesting-bilibili-videos/` 拷进你那个工具的 skills 目录，

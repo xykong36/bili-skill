@@ -1,4 +1,4 @@
-# bili-skills
+# bili-skill
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-open%20protocol-0A9EDC)](https://docs.claude.com/en/docs/claude-code/skills)
@@ -168,8 +168,8 @@ The day the video goes down, the title and the numbers from the day you saved it
 ## Install
 
 ```
-/plugin marketplace add xykong36/bili-skills
-/plugin install bili-skills
+/plugin marketplace add xykong36/bili-skill
+/plugin install bili-skill
 ```
 
 Not on Claude Code? Copy `skills/digesting-bilibili-videos/` into that tool's skills directory,

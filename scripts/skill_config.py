@@ -120,8 +120,8 @@ MINDMAP_TIMEOUT = int(os.environ.get("BILI_MINDMAP_TIMEOUT", "1800"))
 
 # ---------- 缓存 ----------
 # 变量字体定格出的静态实例落这里（每个字重一份，约 10MB），只算一次。
-CACHE = Path(os.environ.get("BILI_SKILLS_CACHE",
-                            Path.home() / ".cache" / "bili-skills"))
+CACHE = Path(os.environ.get("BILI_SKILL_CACHE",
+                            Path.home() / ".cache" / "bili-skill"))
 
 # ---------- .env ----------
 def load_dotenv(*extra_dirs):
