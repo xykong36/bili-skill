@@ -22,9 +22,6 @@ CodeBuddy、Workbuddy、Gemini CLI、OpenCode 等 **50+ 兼容 runtime** 中运�
 两条工作流**并列，不是流水线**：字幕直接走接口拿、全程不碰 mp4，想要文字不必先下视频。
 它们共享同一份 B 站接口封装和同一个 BBDown 登录态，登录一次两边都通。
 
-> 0.4.0 起 `downloading-bilibili-videos` 和 `digesting-bilibili-videos` 合并成后者一个 skill。
-> 之前按名字引用前者的地方要改。
-
 ## 效果示例
 
 拿到手的是官方 AI 字幕，两秒一断、没有标点、读不了：
@@ -153,7 +150,7 @@ python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py doctor
 
 ### 没有 API key 时的三段式交接
 
-1.0.0 起脑图那步默认**不调 API**，而是交给正在跑这个 skill 的 agent：
+脑图那步默认**不调 API**，而是交给正在跑这个 skill 的 agent：
 
 ```
 ① bili.py digest BV1 BV2 --out ./out --name 合集名
@@ -293,7 +290,7 @@ bili-skills/
 
 | 场景 | 防的是 |
 |---|---|
-| `01-routing-download` | 合并后下载请求还能不能路由到位 |
+| `01-routing-download` | 下载请求还能不能路由到位 |
 | `02-routing-digest` | 「download 是 digest 的前置」这个误解；以及产物叫「阅读版」不是「可读版」 |
 | `03-empty-subtitles` | 空字幕列表三种含义，别直接说「这个视频没字幕」 |
 | `04-mp4-integrity` | 四个直觉判据里三个会放过截断的文件 |

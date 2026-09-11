@@ -22,9 +22,6 @@ Two parallel workflows:
 The two workflows are **parallel, not a pipeline**: subtitles come straight off the API and never touch the mp4, so you don't have to download a video to get its text.
 They share one bilibili API wrapper and one BBDown login state — log in once, both sides work.
 
-> Since 0.4.0, `downloading-bilibili-videos` and `digesting-bilibili-videos` are merged into the latter.
-> Anything that referenced the former by name needs updating.
-
 > Note: the deep-dive documents under `skills/digesting-bilibili-videos/references/` are written in Chinese. The findings they back are summarized in English below.
 
 ## What it looks like
@@ -153,7 +150,7 @@ Steps 4 and 5 both consume step 3's opml, so if step 3 is skipped or fails, 3/4/
 
 ### The three-phase handoff when there's no API key
 
-Since 1.0.0 the mindmap step **doesn't call an API by default** — it hands off to whichever agent is running the skill:
+The mindmap step **doesn't call an API by default** — it hands off to whichever agent is running the skill:
 
 ```
 ① bili.py digest BV1 BV2 --out ./out --name BookName
@@ -288,7 +285,7 @@ bili-skills/
 
 | Scenario | Guards against |
 |---|---|
-| `01-routing-download` | download requests still routing correctly after the merge |
+| `01-routing-download` | download requests routing to the right workflow |
 | `02-routing-digest` | the "download is a prerequisite for digest" misreading; and the artifact being 阅读版, not 可读版 |
 | `03-empty-subtitles` | the three meanings of an empty subtitle list — don't just say "this video has no subtitles" |
 | `04-mp4-integrity` | three of the four intuitive criteria let a truncated file through |
