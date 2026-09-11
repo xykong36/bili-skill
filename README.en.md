@@ -1,15 +1,20 @@
 # bili-skills
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Claude Code Plugin](https://img.shields.io/badge/Claude%20Code-Plugin-8A63D2)](https://docs.claude.com/en/docs/claude-code/plugins)
-[![Agent Skill](https://img.shields.io/badge/Agent%20Skill-digesting--bilibili--videos-0A9EDC)](skills/digesting-bilibili-videos/SKILL.md)
+[![Agent Skills](https://img.shields.io/badge/Agent%20Skills-open%20protocol-0A9EDC)](https://docs.claude.com/en/docs/claude-code/skills)
+[![Runtimes](https://img.shields.io/badge/runtimes-50%2B-8A63D2)](#install)
+[![Skill](https://img.shields.io/badge/skill-digesting--bilibili--videos-555)](skills/digesting-bilibili-videos/SKILL.md)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB)](#prerequisites)
 
 [中文](README.md) | **English**
 
 > One BV id in, something you can read, search and keep out.
 
-A Claude Code skill that turns bilibili videos into things worth keeping. Two parallel workflows:
+An **Agent Skill** that turns bilibili videos into things worth keeping.
+Built on the open Agent Skills protocol, it runs in **50+ compatible runtimes** — Claude Code,
+Codex, Cursor, OpenClaw, Hermes Agent, CodeBuddy, Workbuddy, Gemini CLI, OpenCode and others.
+
+Two parallel workflows:
 
 - **Download** — BV id → the video mp4 + cover image + metadata, with an integrity check that actually catches broken files.
 - **Digest** — BV id → official AI subtitles → a readable transcript → an OPML mindmap → a content outline → two searchable Chinese PDFs.
@@ -75,15 +80,23 @@ On the download side, the metadata looks like this (the counts are a snapshot fr
 
 ## Install
 
+**Claude Code** (plugin marketplace):
+
 ```
 /plugin marketplace add xykong36/bili-skills
 /plugin install bili-skills
 ```
 
-After that, just say "download this bilibili video" or "turn this episode into a mindmap" in Claude Code and the skill kicks in.
+**Any other runtime** (Codex / Cursor / OpenClaw / Hermes Agent / CodeBuddy / Workbuddy / Gemini CLI / OpenCode …):
+copy `skills/digesting-bilibili-videos/` into that runtime's skills directory (`~/.claude/skills/` for Claude Code; each runtime has its own path),
+then copy the files from this repo's root `lib/` into **that skill's own `lib/`** (no filename collisions).
+Not into the skills directory's `lib/` — from there `_paths.py` won't find `bili_api.py` and will exit immediately.
 
-Manual install works too: copy `skills/digesting-bilibili-videos/` into `~/.claude/skills/`, then copy the files from this repo's root `lib/` into **that skill's own `lib/`** (no filename collisions).
-Not into `~/.claude/skills/lib/` — from there `_paths.py` won't find `bili_api.py` and will exit immediately.
+After that, just say "download this bilibili video" or "turn this episode into a mindmap" and the skill kicks in.
+
+> The one runtime-specific detail: SKILL.md writes its commands as `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py ...`,
+> and `${CLAUDE_SKILL_DIR}` is a Claude Code placeholder that other runtimes don't expand —
+> there, just run the same script by its real path. The scripts themselves are pure Python stdlib and runtime-agnostic.
 
 ## What it produces
 
@@ -124,7 +137,7 @@ Then route by what you actually want:
 | Subtitles, transcript, article, mindmap, outline, PDF | digest | `bili.py digest BV1xxx --out ./out --name BookName` |
 | Both | one command | `bili.py digest BV1xxx --out ./out --with-video` |
 
-(The table shortens it to `bili.py` for readability; in practice type the full `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py ...` — that exact form is what the `allowed-tools` rule matches, and a shorter one costs you an extra permission prompt.)
+(The table shortens it to `bili.py` for readability; in practice type the full path. Under Claude Code that's `python3 ${CLAUDE_SKILL_DIR}/scripts/bili.py ...` — that exact form is what the `allowed-tools` rule matches, and a shorter one costs you an extra permission prompt. On runtimes that don't expand the variable, use the skill's real path.)
 
 Digest is five steps, each idempotent, so a re-run never redoes finished work:
 
